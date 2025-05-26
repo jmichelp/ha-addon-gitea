@@ -1,6 +1,6 @@
-# Home Assistant Add-on: Example add-on
+# Home Assistant Add-on: Gitea add-on
 
-_Example add-on to use as a blueprint for new add-ons._
+Gitea add-on for Home Assistant to self-host code repositories._
 
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]

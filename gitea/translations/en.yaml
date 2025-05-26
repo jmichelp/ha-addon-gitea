@@ -1,0 +1,18 @@
+configuration:
+  ssl:
+    name: SSL
+    description: >-
+      Enables/Disables SSL (HTTPS) on the web interface.
+  certfile:
+    name: Certificate file
+    description: >-
+      The certificate file to use for SSL. Note that this file must
+      exist in the /ssl/ folder.
+  keyfile:
+    name: Private key file
+    description: >-
+      The private key file to use for SSL. Note that this file must
+      exist in the /ssl/ folder.
+network:
+  22/tcp: The Git SSH interface port
+  3000/tcp: The web UI interface port

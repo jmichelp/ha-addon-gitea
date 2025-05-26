@@ -1,0 +1,32 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start the example service
+# s6-overlay docs: https://github.com/just-containers/s6-overlay
+# ==============================================================================
+
+# Add your code here
+set -e
+
+declare CONFIG_PATH=/data/options.json
+bashio::log.green "[Info] Starting addon process gitea..."
+
+for FOLDER in /data/gitea/conf /data/gitea/log /data/git /data/ssh; do
+    if [ ! -d ${FOLDER} ]; then
+        mkdir -p ${FOLDER}
+    fi
+done
+
+if [ ! -d /data/git/.ssh ]; then
+ mkdir -p /data/git/.ssh
+ chmod 700 /data/git/.ssh
+fi
+
+# only chown if current owner is not already the gitea ${USER}. No recursive check to save time
+if ! [[ $(ls -ld /data/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/gitea; fi
+if ! [[ $(ls -ld /app/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /app/gitea; fi
+if ! [[ $(ls -ld /data/git | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/git; fi
+#chmod 0755 /data/gitea /app/gitea /data/git
+
+## Run your program
+exec su-exec $USER /app/gitea/gitea web
+
