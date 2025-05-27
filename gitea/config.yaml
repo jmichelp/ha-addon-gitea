@@ -30,4 +30,4 @@ panel_icon: "mdi:mdi-git"
 panel_title: "Gitea"
 map:
   - ssl:rw
-image: "ghcr.io/jmichelp/{arch}-addon-example"
+image: "ghcr.io/jmichelp/{arch}-addon-gitea"

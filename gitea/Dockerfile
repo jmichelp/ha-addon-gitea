@@ -43,7 +43,7 @@ ENV USER git
 ENV GITEA_CUSTOM /data/git
 ENV GODEBUG=netdns=go
 
-COPY data /data
+# COPY data /data
 VOLUME ["/data"]
 
 ARG GITEA_VERSION
