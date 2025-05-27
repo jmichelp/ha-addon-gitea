@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration#add-on-config
 name: Gitea add-on
-version: "0.0.1"
+version: "0.0.2"
 slug: gitea
 description: Gitea add-on for self-hosted code repositories
 url: "https://github.com/jmichelp/ha-addon-gitea/tree/main/gitea"

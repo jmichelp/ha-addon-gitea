@@ -39,8 +39,8 @@ RUN addgroup \
     git && \
   echo "git:$(dd if=/dev/urandom bs=24 count=1 status=none | base64)" | chpasswd
 
-ENV USER git
-ENV GITEA_CUSTOM /data/git
+ENV USER=git
+ENV GITEA_CUSTOM=/data/git
 ENV GODEBUG=netdns=go
 
 # COPY data /data
