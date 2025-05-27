@@ -4,7 +4,6 @@ version: "0.0.1"
 slug: gitea
 description: Gitea add-on for self-hosted code repositories
 url: "https://github.com/jmichelp/ha-addon-gitea/tree/main/gitea"
-codenotary: jmichel.p@gmail.com
 arch:
   - armhf
   - armv7
