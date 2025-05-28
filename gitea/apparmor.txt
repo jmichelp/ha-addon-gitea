@@ -1,6 +1,6 @@
 #include <tunables/global>
 
-profile example flags=(attach_disconnected,mediate_deleted) {
+profile gitea flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
   # Capabilities
@@ -28,14 +28,16 @@ profile example flags=(attach_disconnected,mediate_deleted) {
   /data/** rw,
 
   # Start new profile for service
-  /usr/local/bin/gitea cx -> gitea,
-  /app/gitea/gitea cx -> gitea,
+  /usr/local/bin/gitea cx -> gitea_bin,
+  /app/gitea/gitea cx -> gitea_bin,
 
-  profile gitea flags=(attach_disconnected,mediate_deleted) {
+  profile gitea_bin flags=(attach_disconnected,mediate_deleted,complain) {
     #include <abstractions/base>
+    #include <abstractions/nameservice>
+    #include <abstractions/user-tmp>
 
     # Receive signals from S6-Overlay
-    signal (receive) peer=*_example,
+    signal (receive) peer=*_gitea,
 
     # Access to options.json and other files within your addon
     /data/** rw,
@@ -55,5 +57,28 @@ profile example flags=(attach_disconnected,mediate_deleted) {
     /bin/echo ix,
     /etc/passwd r,
     /dev/tty rw,
+    /etc/mime.types r,
+    /proc/sys/net/core/somaxconn r,
+    /proc/version r,
+    /sys/devices/system/cpu/online r,
+    /sys/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+    /usr/bin/basename mrix,
+    /usr/bin/bash mrix,
+    /usr/bin/cat mrix,
+    /usr/bin/dash mrix,
+    /usr/bin/env rix,
+    /usr/bin/git mrix,
+    /usr/lib/git-core/git mrix,
+    /usr/share/git-core/templates/ r,
+    /usr/share/git-core/templates/** r,
+
+    owner @{HOME}/.gitconfig rw,
+    owner @{HOME}/.gitconfig.lock rw,
+    owner @{HOME}/.ssh/ w,
+    owner /proc/*/cpuset r,
+    owner /data/gitea/data/** rwk,
+    owner /data/gitea/data/gitea-repositories/*/*.git/hooks/* mrix,
+    owner /data/gitea/data/gitea-repositories/*/*.git/hooks/*.d/* mrix,
+    owner /data/gitea/log/* rw,
   }
 }

@@ -31,3 +31,4 @@ panel_title: "Gitea"
 map:
   - ssl:rw
 image: "ghcr.io/jmichelp/{arch}-addon-gitea"
+stage: experimental

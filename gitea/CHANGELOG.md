@@ -4,6 +4,8 @@
 
 - Fix legacy parts of Dockerfile
 - Update base image
+- Fix inconsistency in licences
+- Apparmor profile tuning
 
 ## 0.0.1
 

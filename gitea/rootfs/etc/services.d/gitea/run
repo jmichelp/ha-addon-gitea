@@ -8,7 +8,7 @@
 set -e
 
 declare CONFIG_PATH=/data/options.json
-bashio::log.green "[Info] Starting addon process gitea..."
+bashio::log.green "[Info] Starting addon process gitea under ${USER}..."
 
 for FOLDER in /data/gitea/conf /data/gitea/log /data/git /data/ssh; do
     if [ ! -d ${FOLDER} ]; then

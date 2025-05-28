@@ -2,4 +2,4 @@
 
 ## How to use
 
-This add-on allows to self-host code repositories using Gitae.
+This add-on allows to self-host code repositories using Gitea.
