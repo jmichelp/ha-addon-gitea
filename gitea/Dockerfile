@@ -73,6 +73,16 @@ dos2unix $file; \
 chmod a+xwr $file; \
 done
 
+# Prepare filesystem/permissions
+RUN for folder in /data/gitea/conf /data/gitea/log /data/git /data/ssh; do \
+mkdir -p ${folder}; \
+done; \
+chown -R ${USER}:git /data/gitea; \
+chown -R ${USER}:git /app/gitea; \
+chown -R ${USER}:git /data/git; \
+mkdir -p /data/git/.ssh; \
+chmod 700 /data/git/.ssh
+
 
 # Build arguments
 ARG BUILD_DATE
