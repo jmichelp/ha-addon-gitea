@@ -25,7 +25,45 @@ fi
 if ! [[ $(ls -ld /data/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/gitea || true; fi
 if ! [[ $(ls -ld /app/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /app/gitea || true; fi
 if ! [[ $(ls -ld /data/git | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/git || true; fi
-#chmod 0755 /data/gitea /app/gitea /data/git
+
+# Apply configuration to app.ini file
+for config in /data/gitea/conf/app.ini /etc/templates/app.ini; do
+  if [ ! -f "${config}" ]; then
+    continue
+  fi
+
+  for item in PROTOCOL CERT_FILE KEY_FILE ROOT_URL DOMAIN PORT; do
+    sed -i "/${item}/d" "${config}"
+  done
+
+  bashio::config.require.ssl
+  bashio::config.require.domain
+  DOMAIN=$(bashio::config 'domain')
+  PORT=$(bashio::addon.port 3000)
+  if bashio::config.true 'ssl'; then
+    PROTOCOL=https
+    bashio::log.info "SSL is enabled"
+    sed -i "/server/a PROTOCOL=https" "${config}"
+    sed -i "/server/a CERT_FILE=/ssl/$(bashio::config 'certfile')" "${config}"
+    sed -i "/server/a KEY_FILE=/ssl/$(bashio::config 'keyfile')" "${config}"
+    chmod 744 /ssl/*
+  else
+    PROTOCOL=http
+    sed -i "/server/a PROTOCOL=http" "${config}"
+  fi
+  if bashio::config.has_value 'root_url'; then
+    ROOT_URL=$(bashio::config 'root_url')
+    bashio::log.blue "ROOT_URL set, using value : ${ROOT_URL}"
+  else
+    ROOT_URL="${PROTOCOL}://${DOMAIN}:${PORT}"
+    bashio::log.blue "ROOT_URL not set, using extrapolated value : ${ROOT_URL}"
+  fi
+  sed -i "/server/a ROOT_URL=$ROOT_URL" "${config}"
+  sed -i "/server/a DOMAIN=${DOMAIN}" "${config}"
+  bashio::log.blue "DOMAIN is set to ${DOMAIN}"
+  sed -i "/server/a PORT=${PORT}" "${config}"
+  bashio::log.blue "PORT is set to ${PORT}"
+done
 
 ## Run your program
 exec su-exec $USER /app/gitea/gitea web

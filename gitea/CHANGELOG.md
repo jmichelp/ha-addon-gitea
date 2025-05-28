@@ -1,5 +1,11 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.0.6
+
+- Fix SSL handling
+- Add network communication to apparmor profile
+- Add more configuration option to adapt the server configuration at startup
+
 ## 0.0.5
 
 - Revert chown in startup

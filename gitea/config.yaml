@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration#add-on-config
 name: Gitea add-on
-version: "0.0.5"
+version: "0.0.6"
 slug: gitea
 description: Gitea add-on for self-hosted code repositories
 url: "https://github.com/jmichelp/ha-addon-gitea/tree/main/gitea"
@@ -15,10 +15,13 @@ options:
   ssl: false
   certfile: fullchain.pem
   keyfile: privkey.pem
+  domain: homeassistant.local
 schema:
   ssl: bool
   certfile: str
   keyfile: str
+  root_url: str?
+  domain: str
 ports:
   22/tcp: 3022
   3000/tcp: 3000
