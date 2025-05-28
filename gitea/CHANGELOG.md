@@ -1,5 +1,10 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.0.5
+
+- Revert chown in startup
+- Grant apparmor capabilities to chown/suexec
+
 ## 0.0.4
 
 - Remove chown in startup script
