@@ -21,12 +21,6 @@ if [ ! -d /data/git/.ssh ]; then
  chmod 700 /data/git/.ssh
 fi
 
-# only chown if current owner is not already the gitea ${USER}. No recursive check to save time
-if ! [[ $(ls -ld /data/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/gitea; fi
-if ! [[ $(ls -ld /app/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /app/gitea; fi
-if ! [[ $(ls -ld /data/git | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/git; fi
-#chmod 0755 /data/gitea /app/gitea /data/git
-
 ## Run your program
 exec su-exec $USER /app/gitea/gitea web
 

@@ -1,5 +1,9 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.0.4
+
+- Remove chown in startup script
+
 ## 0.0.3
 
 - Update logo and icon
