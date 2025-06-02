@@ -61,7 +61,7 @@ RUN  \
     && mkdir -p /app/gitea \
     && curl -SLo /app/gitea/gitea https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}  \
     && curl -SLo /app/gitea/gitea.asc https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}.asc  \
-    && gpg --keyserver keys.openpgp.org --recv ${GITEA_GPG_KEYID} \
+    && (gpg --keyserver keys.openpgp.org --recv ${GITEA_GPG_KEYID} || true) \
     && gpg --verify /app/gitea/gitea.asc /app/gitea/gitea \
     && chmod 0755 /app/gitea/gitea \
     && ln -s /app/gitea/gitea /usr/local/bin/gitea \
