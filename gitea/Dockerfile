@@ -18,6 +18,7 @@ RUN apk --no-cache add \
     sqlite \
     bash \
     git \
+    gpg \
     subversion \
     linux-pam \
     s6 \
@@ -40,13 +41,15 @@ RUN addgroup \
   echo "git:$(dd if=/dev/urandom bs=24 count=1 status=none | base64)" | chpasswd
 
 ENV USER=git
-ENV GITEA_CUSTOM=/data/git
+ENV GITEA_CUSTOM=/data/gitea
 ENV GODEBUG=netdns=go
+ENV GITEA_WORK_DIR=/data/gitea
 
 # COPY data /data
 VOLUME ["/data"]
 
 ARG GITEA_VERSION
+ARG GITEA_GPG_KEYID
 RUN  \
      ARCH="${BUILD_ARCH}" \
      && if [ "${BUILD_ARCH}" = "aarch64" ]; then ARCH="arm64"; fi \
@@ -57,6 +60,9 @@ RUN  \
      \
     && mkdir -p /app/gitea \
     && curl -SLo /app/gitea/gitea https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}  \
+    && curl -SLo /app/gitea/gitea.asc https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}.asc  \
+    && gpg --keyserver keys.openpgp.org --recv ${GITEA_GPG_KEYID} \
+    && gpg --verify /app/gitea/gitea.asc /app/gitea/gitea \
     && chmod 0755 /app/gitea/gitea \
     && ln -s /app/gitea/gitea /usr/local/bin/gitea \
     && apk del subversion  \

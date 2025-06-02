@@ -1,5 +1,10 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.0.7
+
+- Verify downloaded binary with gpg
+- Fix installation not working due to path errors
+
 ## 0.0.6
 
 - Fix SSL handling
