@@ -19,6 +19,7 @@ RUN apk --no-cache add \
     bash \
     git \
     gpg \
+    gpg-agent \
     subversion \
     linux-pam \
     s6 \
@@ -56,7 +57,7 @@ RUN  \
      && if [ "${BUILD_ARCH}" = "armv7" ]; then ARCH="arm-6"; fi \
      && if [ "${BUILD_ARCH}" = "armhf" ]; then ARCH="arm-5"; fi \
      && if [ "${BUILD_ARCH}" = "amd64" ]; then ARCH="amd64"; fi \
-     && if [ "${BUILD_ARCH}" = "i368" ]; then ARCH="368"; fi \
+     && if [ "${BUILD_ARCH}" = "i386" ]; then ARCH="386"; fi \
      \
     && mkdir -p /app/gitea \
     && curl -SLo /app/gitea/gitea https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}  \
