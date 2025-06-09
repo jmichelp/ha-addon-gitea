@@ -26,44 +26,50 @@ if ! [[ $(ls -ld /data/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${U
 if ! [[ $(ls -ld /app/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /app/gitea || true; fi
 if ! [[ $(ls -ld /data/git | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/git || true; fi
 
-# Apply configuration to app.ini file
-for config in /data/gitea/conf/app.ini /etc/templates/app.ini; do
-  if [ ! -f "${config}" ]; then
-    continue
-  fi
+# Apply configuration through ENV variables
+bashio::config.require.domain
+bashio::config.require.ssl
 
-  for item in PROTOCOL CERT_FILE KEY_FILE ROOT_URL DOMAIN PORT; do
-    sed -i "/${item}/d" "${config}"
-  done
+DOMAIN=$(bashio::config 'domain')
+PORT=$(bashio::addon.port 3000)
+if bashio::config.true 'ssl'; then
+  bashio::log.info "SSL is enabled"
+  PROTOCOL=https
+  export GITEA__server__CERT_FILE="/ssl/fullchain.pem"
+  export GITEA__server__KEY_FILE="/ssl/privkey.pem"
+else
+  PROTOCOL=http
+if
+if bashio::config.has_value 'root_url'; then
+  ROOT_URL=$(bashio::config 'root_url')
+  bashio::log.blue "ROOT_URL set, using value : ${ROOT_URL}"
+else
+  ROOT_URL="${PROTOCOL}://${DOMAIN}:${PORT}"
+  bashio::log.blue "ROOT_URL not set, using extrapolated value : ${ROOT_URL}"
+fi
+export GITEA__server__PROTOCOL=${PROTOCOL}
+export GITEA__server__ROOT_URL=${ROOT_URL}
+export GITEA__server__HTTP_PORT=${PORT}
 
-  bashio::config.require.ssl
-  bashio::config.require.domain
-  DOMAIN=$(bashio::config 'domain')
-  PORT=$(bashio::addon.port 3000)
-  if bashio::config.true 'ssl'; then
-    PROTOCOL=https
-    bashio::log.info "SSL is enabled"
-    sed -i "/server/a PROTOCOL=https" "${config}"
-    sed -i "/server/a CERT_FILE=/ssl/$(bashio::config 'certfile')" "${config}"
-    sed -i "/server/a KEY_FILE=/ssl/$(bashio::config 'keyfile')" "${config}"
-    chmod 744 /ssl/*
+# Patch nginx configuration
+bashio::config.require.use_nginx
+if bashio.config.true "use_nginx"; then
+  bashio::log.info "Configure Nginx reverse proxy"
+  if ping -c 1 core-nginx-proxy >/dev/null 2>&1; then
+    bashio::log.info "Current Nginx configuration"
+    bashio::addon.options core_nginx_proxy
+    echo
+
+    bashio::log.info "Adding custom config to /share/nginx_proxy/nginx_gitea.conf"
+    mkdir -p /share/nging_proxy
+    sed "s/__DOMAIN__/${DOMAIN}/g; s/__GITEA_PORT__/${PORT}/g" /app/nginx_gitea.conf > /share/nginx_proxy/nginx_gitea.conf
+    cat /share/nginx_proxy/nginx_gitea.conf
   else
-    PROTOCOL=http
-    sed -i "/server/a PROTOCOL=http" "${config}"
+    bashio::log.warning "Nginx is not running"
   fi
-  if bashio::config.has_value 'root_url'; then
-    ROOT_URL=$(bashio::config 'root_url')
-    bashio::log.blue "ROOT_URL set, using value : ${ROOT_URL}"
-  else
-    ROOT_URL="${PROTOCOL}://${DOMAIN}:${PORT}"
-    bashio::log.blue "ROOT_URL not set, using extrapolated value : ${ROOT_URL}"
-  fi
-  sed -i "/server/a ROOT_URL=$ROOT_URL" "${config}"
-  sed -i "/server/a DOMAIN=${DOMAIN}" "${config}"
-  bashio::log.blue "DOMAIN is set to ${DOMAIN}"
-  sed -i "/server/a PORT=${PORT}" "${config}"
-  bashio::log.blue "PORT is set to ${PORT}"
-done
+else
+  bashio::log.waring "Nginx reverse proxy is disabled"
+fi
 
 ## Run your program
 exec su-exec $USER /app/gitea/gitea web

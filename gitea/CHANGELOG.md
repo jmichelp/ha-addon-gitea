@@ -1,5 +1,11 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.0.8
+
+- Try to use Nginx reverse proxy
+- Replace configuration file editing with env variables
+- Try to start opensshd server as it doesn't seem to listen
+
 ## 0.0.7
 
 - Verify downloaded binary with gpg

@@ -83,5 +83,6 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
     owner /data/gitea/data/gitea-repositories/*/*.git/hooks/* mrix,
     owner /data/gitea/data/gitea-repositories/*/*.git/hooks/*.d/* mrix,
     owner /data/gitea/log/* rw,
+    owner /data/gitea/conf/* rw,
   }
 }

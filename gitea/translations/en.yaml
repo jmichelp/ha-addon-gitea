@@ -1,18 +1,19 @@
 configuration:
-  ssl:
-    name: SSL
+  ss:
+    name: Enable SSL
     description: >-
-      Enables/Disables SSL (HTTPS) on the web interface.
-  certfile:
-    name: Certificate file
+      Enable usage of SSL on the Web UI. Useful if you want to use FIDO2
+      security keys as 2FA.
+  use_nginx:
+    name: Use Nginx reverse proxy
     description: >-
-      The certificate file to use for SSL. Note that this file must
-      exist in the /ssl/ folder.
-  keyfile:
-    name: Private key file
+      Enables/Disables Nginx reverse proxy for the web interface.
+      It is recommended to enable it if you plan to expose the Web UI
+      to external network as it will enable SSL.
+  domain:
+    name: FQDN
     description: >-
-      The private key file to use for SSL. Note that this file must
-      exist in the /ssl/ folder.
+      Lower case, without https, e.g. `gitea.example.com`
 network:
   22/tcp: The Git SSH interface port
   3000/tcp: The web UI interface port
