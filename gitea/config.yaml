@@ -23,7 +23,7 @@ schema:
 ingress: true
 ingress_port: 3000
 services:
-  db:want
+  mysql:want
 ports:
   22/tcp: 3022
   3000/tcp: 3000
