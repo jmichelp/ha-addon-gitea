@@ -23,7 +23,7 @@ schema:
 ingress: true
 ingress_port: 3000
 services:
-  db: want
+  db:want
 ports:
   22/tcp: 3022
   3000/tcp: 3000
@@ -34,7 +34,7 @@ ports_description:
 panel_icon: "mdi:mdi-git"
 panel_title: "Gitea"
 map:
-  - share: rw
-  - ssl: rw
+  - share:rw
+  - ssl:ro
 image: "ghcr.io/jmichelp/{arch}-addon-gitea"
 stage: experimental
