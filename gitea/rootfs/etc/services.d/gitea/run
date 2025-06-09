@@ -27,7 +27,7 @@ if ! [[ $(ls -ld /app/gitea | awk '{print $3}') = ${USER} ]]; then chown -R ${US
 if ! [[ $(ls -ld /data/git | awk '{print $3}') = ${USER} ]]; then chown -R ${USER}:git /data/git || true; fi
 
 # Apply configuration through ENV variables
-bashio::config.require.domain
+bashio::config.require domain
 bashio::config.require.ssl
 
 DOMAIN=$(bashio::config 'domain')
