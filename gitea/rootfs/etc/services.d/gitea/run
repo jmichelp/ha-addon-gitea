@@ -55,7 +55,7 @@ export GITEA__server__HTTP_PORT="${PORT}"
 
 # Patch nginx configuration
 bashio::config.require use_nginx
-if bashio.config.true "use_nginx"; then
+if bashio::config.true "use_nginx"; then
   bashio::log.info "Configure Nginx reverse proxy"
   if ping -c 1 core-nginx-proxy >/dev/null 2>&1; then
     bashio::log.info "Current Nginx configuration"
@@ -70,7 +70,7 @@ if bashio.config.true "use_nginx"; then
     bashio::log.warning "Nginx is not running"
   fi
 else
-  bashio::log.waring "Nginx reverse proxy is disabled"
+  bashio::log.warning "Nginx reverse proxy is disabled"
 fi
 
 ## Run your program
