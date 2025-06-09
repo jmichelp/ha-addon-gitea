@@ -39,7 +39,8 @@ if bashio::config.true 'ssl'; then
   export GITEA__server__KEY_FILE="/ssl/$(bashio::config 'certfile')"
 else
   PROTOCOL=http
-if
+fi
+
 if bashio::config.has_value 'root_url'; then
   ROOT_URL=$(bashio::config 'root_url')
   bashio::log.blue "ROOT_URL set, using value : ${ROOT_URL}"
@@ -47,12 +48,13 @@ else
   ROOT_URL="${PROTOCOL}://${DOMAIN}:${PORT}"
   bashio::log.blue "ROOT_URL not set, using extrapolated value : ${ROOT_URL}"
 fi
-export GITEA__server__PROTOCOL=${PROTOCOL}
-export GITEA__server__ROOT_URL=${ROOT_URL}
-export GITEA__server__HTTP_PORT=${PORT}
+
+export GITEA__server__PROTOCOL="${PROTOCOL}"
+export GITEA__server__ROOT_URL="${ROOT_URL}"
+export GITEA__server__HTTP_PORT="${PORT}"
 
 # Patch nginx configuration
-bashio::config.require.use_nginx
+bashio::config.require use_nginx
 if bashio.config.true "use_nginx"; then
   bashio::log.info "Configure Nginx reverse proxy"
   if ping -c 1 core-nginx-proxy >/dev/null 2>&1; then
