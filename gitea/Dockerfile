@@ -83,7 +83,7 @@ chmod a+xwr $file; \
 done
 
 RUN mkdir -p /etc/ssh
-COPY /etc/templates/sshd_config /etc/ssh/sshd_config
+#COPY rootfs/etc/templates/sshd_config /etc/ssh/sshd_config
 
 # Prepare filesystem/permissions
 RUN for folder in /data/gitea/conf /data/gitea/log /data/git /data/ssh; do \
