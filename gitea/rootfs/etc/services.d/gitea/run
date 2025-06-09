@@ -35,8 +35,8 @@ PORT=$(bashio::addon.port 3000)
 if bashio::config.true 'ssl'; then
   bashio::log.info "SSL is enabled"
   PROTOCOL=https
-  export GITEA__server__CERT_FILE="/ssl/fullchain.pem"
-  export GITEA__server__KEY_FILE="/ssl/privkey.pem"
+  export GITEA__server__CERT_FILE="/ssl/$(bashio::config 'keyfile')"
+  export GITEA__server__KEY_FILE="/ssl/$(bashio::config 'certfile')"
 else
   PROTOCOL=http
 if
