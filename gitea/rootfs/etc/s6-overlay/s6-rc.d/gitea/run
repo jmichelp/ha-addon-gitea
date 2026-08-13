@@ -69,6 +69,8 @@ export GITEA_CUSTOM="/data/gitea"
 export GITEA_WORK_DIR="/data/gitea"
 export GODEBUG="netdns=go"
 
+export GITEA__server__STATIC_ROOT_PATH="/usr/share/webapps/gitea"
+export GITEA__server__APP_DATA_PATH="/data/gitea/data"
 export GITEA__server__PROTOCOL="${PROTOCOL}"
 export GITEA__server__DOMAIN="${DOMAIN}"
 export GITEA__server__SSH_DOMAIN="${DOMAIN}"
@@ -82,4 +84,4 @@ export GITEA__server__SSH_LISTEN_PORT="2222"
 bashio::log.info "Gitea Web UI listening on port ${HTTP_PORT}, SSH listening on port 2222 (external: ${SSH_PORT})"
 
 # Run Gitea as git user
-exec su-exec git /app/gitea/gitea web -c /data/gitea/conf/app.ini --work-path /data/gitea
+exec su-exec git /usr/bin/gitea web -c /data/gitea/conf/app.ini --work-path /data/gitea

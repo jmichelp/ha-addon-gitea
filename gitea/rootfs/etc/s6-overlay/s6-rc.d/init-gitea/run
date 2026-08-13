@@ -36,6 +36,7 @@ ROOT = /data/git/repositories
 DEFAULT_BRANCH = main
 
 [server]
+STATIC_ROOT_PATH = /usr/share/webapps/gitea
 APP_DATA_PATH = /data/gitea/data
 DOMAIN = homeassistant.local
 SSH_DOMAIN = homeassistant.local
