@@ -17,7 +17,9 @@ RUN \
     && curl -sSLf -o /usr/bin/tempio \
         "https://github.com/home-assistant/tempio/releases/download/${TEMPIO_VERSION}/tempio_${tempio_arch}"
 
-ARG BUILD_ARCH
+ARG BUILD_ARCH=amd64
+ARG GITEA_VERSION="1.27.1"
+ARG GITEA_GPG_KEYID="7C9E68152594688862D62AF62D9AE806EC1592E2"
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -88,7 +90,7 @@ LABEL \
     maintainer="Jean-Michel Picod <jmichel.p@gmail.com>" \
     org.opencontainers.image.title="${BUILD_NAME}" \
     org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
-    org.opencontainers.image.vendor="Home Assistant Community Add-ons" \
+    org.opencontainers.image.vendor="Home Assistant Community Apps" \
     org.opencontainers.image.authors="Jean-Michel Picod <jmichel.p@gmail.com>" \
     org.opencontainers.image.licenses="Apache 2.0" \
     org.opencontainers.image.url="https://github.com/${BUILD_REPOSITORY}" \
