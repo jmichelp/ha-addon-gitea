@@ -17,6 +17,13 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   capability kill,
   capability net_bind_service,
 
+  # Networking
+  network tcp,
+  network udp,
+  network inet,
+  network inet6,
+  network unix,
+
   # S6-Overlay and binaries
   /init ix,
   /bin/** ix,
@@ -71,6 +78,7 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
     network udp,
     network inet,
     network inet6,
+    network unix,
 
     # Persistent data and mapped volumes
     /data/** rwkl,

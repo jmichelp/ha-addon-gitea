@@ -1,5 +1,9 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.2.1
+
+- Fix port binding
+
 ## 0.2.0
 
 - Make both ingress and nginx reverse proxy work

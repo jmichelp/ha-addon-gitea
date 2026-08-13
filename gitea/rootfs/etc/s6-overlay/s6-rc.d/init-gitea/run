@@ -89,6 +89,17 @@ LEVEL = Info
 [lfs]
 PATH = /data/gitea/data/lfs
 EOF
+else
+    # Update existing app.ini with internal port and paths
+    if ! grep -q "STATIC_ROOT_PATH" /data/gitea/conf/app.ini; then
+        sed -i '/\[server\]/a STATIC_ROOT_PATH = /usr/share/webapps/gitea' /data/gitea/conf/app.ini
+    fi
+    sed -i 's/^HTTP_PORT = .*/HTTP_PORT = 3001/' /data/gitea/conf/app.ini
+    if grep -q "^HTTP_ADDR" /data/gitea/conf/app.ini; then
+        sed -i 's/^HTTP_ADDR = .*/HTTP_ADDR = 127.0.0.1/' /data/gitea/conf/app.ini
+    else
+        sed -i '/\[server\]/a HTTP_ADDR = 127.0.0.1' /data/gitea/conf/app.ini
+    fi
 fi
 
 # Secure sensitive configuration and SSH keys
@@ -117,6 +128,9 @@ else
     DIRECT_LISTEN="listen 3000;"
 fi
 
+# Ensure Nginx runs properly without permission drops
+sed -i 's/^user .*/user root;/' /etc/nginx/nginx.conf 2>/dev/null || true
+
 # Configure internal NGINX for Ingress (8099) and Direct/Custom Domain (3000)
 rm -f /etc/nginx/http.d/default.conf 2>/dev/null || true
 cat <<EOF > /etc/nginx/http.d/gitea.conf
@@ -132,6 +146,7 @@ server {
 
     location / {
         proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
 
         proxy_set_header Accept-Encoding "";
         proxy_set_header Host \$http_host;
@@ -165,6 +180,7 @@ server {
 
     location / {
         proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
 
         proxy_set_header Connection \$http_connection;
         proxy_set_header Upgrade \$http_upgrade;
