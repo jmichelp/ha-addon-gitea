@@ -24,27 +24,23 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /run/{s6,s6-rc*,service}/** ix,
   /package/** ix,
   /command/** ix,
-  /etc/s6-overlay/** rwix,
+  /etc/s6-overlay/** ix,
   /etc/services.d/** rwix,
   /etc/cont-init.d/** rwix,
   /etc/cont-finish.d/** rwix,
-  /run/** rwk,
+  /run/{,**} rwk,
   /dev/tty rw,
   /dev/null rw,
   /dev/urandom r,
 
   # Bashio
   /usr/lib/bashio/** ix,
-  /tmp/** rwkl,
-  /tmp/ rwkl,
+  /tmp/** rwk,
 
   # Mapped volumes and configuration
   /data/** rwkl,
-  /data/ rwkl,
   /ssl/** r,
-  /ssl/ r,
   /share/** rwkl,
-  /share/ rwkl,
 
   # Start new profile for service
   /usr/local/bin/gitea cx -> gitea_bin,
@@ -67,11 +63,8 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
 
     # Persistent data and mapped volumes
     /data/** rwkl,
-    /data/ rwkl,
     /share/** rwkl,
-    /share/ rwkl,
     /ssl/** r,
-    /ssl/ r,
 
     # Access required for service functionality
     /usr/local/bin/gitea rix,
@@ -94,7 +87,6 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
     /usr/share/git-core/** r,
 
     /tmp/** rwkl,
-    /tmp/ rwkl,
 
     owner @{HOME}/** rwkl,
     owner @{HOME}/ rwkl,

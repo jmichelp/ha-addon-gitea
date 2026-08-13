@@ -1,5 +1,10 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.1.2
+
+- Update dependencies, profile, etc.
+- Update badges
+
 ## 0.0.8
 
 - Try to use Nginx reverse proxy
