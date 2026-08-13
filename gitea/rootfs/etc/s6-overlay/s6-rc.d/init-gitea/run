@@ -8,26 +8,20 @@
 bashio::log.info "Initializing Gitea environment..."
 
 # Ensure required directories exist
-for folder in \
-    /data/gitea \
+mkdir -p \
     /data/gitea/conf \
     /data/gitea/data \
     /data/gitea/log \
     /data/gitea/ssh \
-    /data/git \
     /data/git/repositories \
-    /data/git/.ssh; do
-    if [ ! -d "${folder}" ]; then
-        mkdir -p "${folder}"
-    fi
-done
+    /data/git/.ssh
 
-chmod 700 /data/git/.ssh
-chmod 750 /data/git
-chmod 750 /data/gitea
+# Set safe permissions (755 for directories, 700 for ssh keys)
+chmod 755 /data/gitea /data/git /data/git/repositories 2>/dev/null || true
+chmod 700 /data/git/.ssh /data/gitea/ssh 2>/dev/null || true
 
-# Ensure proper file ownership
-chown -R git:git /data/gitea /data/git /app/gitea
+# Ensure all Gitea data is owned by git:git
+chown -R git:git /data/gitea /data/git /app/gitea 2>/dev/null || true
 
 # Setup default app.ini if not existing
 if [ ! -f /data/gitea/conf/app.ini ]; then
