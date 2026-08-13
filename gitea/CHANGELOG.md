@@ -1,5 +1,9 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.1.4
+
+- Fix apparmor profile
+
 ## 0.1.3
 
 - Use Alpine package instead of manually install it
