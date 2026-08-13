@@ -25,8 +25,8 @@ if [ -z "${WEB_PORT}" ]; then
     WEB_PORT=3000
 fi
 
-# Configure SSL
-if bashio::config.true 'ssl'; then
+# Determine protocol and SSL config
+if bashio::config.true 'ssl' && ! bashio::config.true 'use_nginx'; then
     bashio::config.require 'certfile'
     bashio::config.require 'keyfile'
     CERT_FILE="/ssl/$(bashio::config 'certfile')"
@@ -51,9 +51,15 @@ fi
 if bashio::config.has_value 'root_url'; then
     ROOT_URL=$(bashio::config 'root_url')
     bashio::log.info "Using configured ROOT_URL: ${ROOT_URL}"
+elif bashio::config.true 'use_nginx'; then
+    ROOT_URL="https://${DOMAIN}/"
+    bashio::log.info "Nginx reverse proxy is active, defaulting ROOT_URL: ${ROOT_URL}"
+elif bashio::config.true 'ssl'; then
+    ROOT_URL="https://${DOMAIN}:${WEB_PORT}/"
+    bashio::log.info "Direct SSL active, defaulting ROOT_URL: ${ROOT_URL}"
 else
-    ROOT_URL="${PROTOCOL}://${DOMAIN}:${WEB_PORT}/"
-    bashio::log.info "Using extrapolated ROOT_URL: ${ROOT_URL}"
+    ROOT_URL="http://${DOMAIN}:${WEB_PORT}/"
+    bashio::log.info "Defaulting ROOT_URL: ${ROOT_URL}"
 fi
 
 # Export environment variables for Gitea

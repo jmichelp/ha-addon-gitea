@@ -43,6 +43,7 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /share/** rwkl,
 
   # Start new profile for service
+  /usr/bin/gitea cx -> gitea_bin,
   /usr/local/bin/gitea cx -> gitea_bin,
   /app/gitea/gitea cx -> gitea_bin,
 

@@ -1,5 +1,10 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.1.3
+
+- Use Alpine package instead of manually install it
+- Fix nginx config
+
 ## 0.1.2
 
 - Update dependencies, profile, etc.

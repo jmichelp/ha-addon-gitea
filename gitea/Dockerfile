@@ -15,30 +15,27 @@ RUN \
         *) echo "Unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
     esac \
     && curl -sSLf -o /usr/bin/tempio \
-        "https://github.com/home-assistant/tempio/releases/download/${TEMPIO_VERSION}/tempio_${tempio_arch}"
-
-ARG BUILD_ARCH=amd64
-ARG GITEA_VERSION="1.27.1"
-ARG GITEA_GPG_KEYID="7C9E68152594688862D62AF62D9AE806EC1592E2"
+        "https://github.com/home-assistant/tempio/releases/download/${TEMPIO_VERSION}/tempio_${tempio_arch}" \
+    && chmod a+x /usr/bin/tempio
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apk --no-cache add \
-    su-exec \
-    ca-certificates \
+    gitea \
     sqlite \
+    su-exec \
     bash \
-    git \
-    git-lfs \
-    gnupg \
-    tzdata \
     curl \
     openssh-client \
-    openssh-keygen
+    openssh-keygen \
+    mailcap \
+    tzdata \
+    ca-certificates
 
-RUN addgroup -S -g 1000 git \
-    && adduser -S -H -D -h /data/git -s /bin/bash -u 1000 -G git git
+# Ensure git user/group exists with proper home directory
+RUN if ! getent group git >/dev/null 2>&1; then addgroup -S -g 1000 git; fi \
+    && if ! getent passwd git >/dev/null 2>&1; then adduser -S -H -D -h /data/git -s /bin/bash -u 1000 -G git git; fi
 
 ENV USER=git
 ENV HOME=/data/git
@@ -46,20 +43,10 @@ ENV GITEA_CUSTOM=/data/gitea
 ENV GODEBUG=netdns=go
 ENV GITEA_WORK_DIR=/data/gitea
 
-RUN \
-    ARCH="${BUILD_ARCH}" \
-    && if [ "${BUILD_ARCH}" = "aarch64" ]; then ARCH="arm64"; fi \
-    && if [ "${BUILD_ARCH}" = "amd64" ]; then ARCH="amd64"; fi \
-    && mkdir -p /app/gitea /data/git/.gnupg \
-    && curl -SLo /app/gitea/gitea "https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}" \
-    && curl -SLo /app/gitea/gitea.asc "https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}.asc" \
-    && ( gpg --keyserver keys.openpgp.org --recv-keys "${GITEA_GPG_KEYID}" \
-      || gpg --keyserver keyserver.ubuntu.com --recv-keys "${GITEA_GPG_KEYID}" \
-      || gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "${GITEA_GPG_KEYID}" ) \
-    && gpg --verify /app/gitea/gitea.asc /app/gitea/gitea \
-    && chmod 0755 /app/gitea/gitea \
-    && ln -s /app/gitea/gitea /usr/local/bin/gitea \
-    && rm -rf /root/.gnupg /tmp/* /var/cache/apk/*
+# Compatibility symlinks for paths
+RUN mkdir -p /app/gitea /data/git/.gnupg \
+    && ln -sf /usr/bin/gitea /app/gitea/gitea \
+    && ln -sf /usr/bin/gitea /usr/local/bin/gitea
 
 # Copy root filesystem
 COPY rootfs /

@@ -89,7 +89,7 @@ if bashio::config.true "use_nginx"; then
     if [ -z "${PORT}" ]; then
         PORT=3000
     fi
-    bashio::log.info "Configuring Nginx reverse proxy integration for domain ${DOMAIN}..."
+    bashio::log.info "Configuring Nginx reverse proxy integration for domain ${DOMAIN} (forwarding to 127.0.0.1:${PORT})..."
     mkdir -p /share/nginx_proxy
     sed "s/__DOMAIN__/${DOMAIN}/g; s/__GITEA_PORT__/${PORT}/g" /app/nginx_gitea.conf > /share/nginx_proxy/nginx_gitea.conf
 fi
