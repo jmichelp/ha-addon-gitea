@@ -38,10 +38,39 @@ fi
 # Ensure directory permissions are 755
 chmod 755 /data/gitea /data/gitea/conf /data/gitea/data /data/gitea/log /data/gitea/ssh /data/git /data/git/repositories /data/git/.ssh 2>/dev/null || true
 
+# Calculate configuration parameters
+bashio::config.require 'domain'
+bashio::config.require 'ssl'
+
+DOMAIN=$(bashio::config 'domain')
+SSH_PORT=$(bashio::addon.port 2222)
+if [ -z "${SSH_PORT}" ]; then
+    SSH_PORT=3022
+fi
+WEB_PORT=$(bashio::addon.port 3000)
+if [ -z "${WEB_PORT}" ]; then
+    WEB_PORT=3000
+fi
+
+# Determine protocol and ROOT_URL for external access
+if bashio::config.has_value 'root_url'; then
+    ROOT_URL=$(bashio::config 'root_url')
+    bashio::log.info "Using configured ROOT_URL: ${ROOT_URL}"
+elif bashio::config.true 'use_nginx'; then
+    ROOT_URL="https://${DOMAIN}/"
+    bashio::log.info "Nginx reverse proxy is active, defaulting ROOT_URL: ${ROOT_URL}"
+elif bashio::config.true 'ssl'; then
+    ROOT_URL="https://${DOMAIN}:${WEB_PORT}/"
+    bashio::log.info "Direct SSL active, defaulting ROOT_URL: ${ROOT_URL}"
+else
+    ROOT_URL="http://${DOMAIN}:${WEB_PORT}/"
+    bashio::log.info "Defaulting ROOT_URL: ${ROOT_URL}"
+fi
+
 # Setup default app.ini if not existing or empty
 if [ ! -s /data/gitea/conf/app.ini ]; then
     bashio::log.info "Creating initial Gitea configuration (app.ini)..."
-    cat <<'EOF' > /data/gitea/conf/app.ini
+    cat <<EOF > /data/gitea/conf/app.ini
 APP_NAME = Gitea: Git with a cup of tea
 RUN_USER = git
 WORK_PATH = /data/gitea
@@ -53,14 +82,14 @@ DEFAULT_BRANCH = main
 
 [server]
 APP_DATA_PATH = /data/gitea/data
-DOMAIN = homeassistant.local
-SSH_DOMAIN = homeassistant.local
+DOMAIN = ${DOMAIN}
+SSH_DOMAIN = ${DOMAIN}
 HTTP_ADDR = 127.0.0.1
 HTTP_PORT = 3001
-ROOT_URL = http://homeassistant.local:3000/
+ROOT_URL = ${ROOT_URL}
 DISABLE_SSH = false
 START_SSH_SERVER = true
-SSH_PORT = 3022
+SSH_PORT = ${SSH_PORT}
 SSH_LISTEN_PORT = 2222
 SSH_KEYGEN_PATH = /usr/bin/ssh-keygen
 SSH_ROOT_PATH = /data/gitea/ssh
@@ -102,13 +131,21 @@ LEVEL = Info
 PATH = /data/gitea/data/lfs
 EOF
 else
-    # Update existing app.ini with internal port, optimizations, and cleanups
+    # Update existing app.ini with current domain, ports, ROOT_URL, and optimizations
     sed -i '/STATIC_ROOT_PATH/d' /data/gitea/conf/app.ini
-    sed -i 's/^HTTP_PORT = .*/HTTP_PORT = 3001/' /data/gitea/conf/app.ini
-    if grep -q "^HTTP_ADDR" /data/gitea/conf/app.ini; then
-        sed -i 's/^HTTP_ADDR = .*/HTTP_ADDR = 127.0.0.1/' /data/gitea/conf/app.ini
-    else
+    sed -i "s|^HTTP_PORT = .*|HTTP_PORT = 3001|" /data/gitea/conf/app.ini
+    sed -i "s|^HTTP_ADDR = .*|HTTP_ADDR = 127.0.0.1|" /data/gitea/conf/app.ini
+    sed -i "s|^ROOT_URL = .*|ROOT_URL = ${ROOT_URL}|" /data/gitea/conf/app.ini
+    sed -i "s|^DOMAIN = .*|DOMAIN = ${DOMAIN}|" /data/gitea/conf/app.ini
+    sed -i "s|^SSH_DOMAIN = .*|SSH_DOMAIN = ${DOMAIN}|" /data/gitea/conf/app.ini
+    sed -i "s|^SSH_PORT = .*|SSH_PORT = ${SSH_PORT}|" /data/gitea/conf/app.ini
+    sed -i "s|^SSH_LISTEN_PORT = .*|SSH_LISTEN_PORT = 2222|" /data/gitea/conf/app.ini
+
+    if ! grep -q "^HTTP_ADDR" /data/gitea/conf/app.ini; then
         sed -i '/\[server\]/a HTTP_ADDR = 127.0.0.1' /data/gitea/conf/app.ini
+    fi
+    if ! grep -q "^ROOT_URL" /data/gitea/conf/app.ini; then
+        sed -i "/\[server\]/a ROOT_URL = ${ROOT_URL}" /data/gitea/conf/app.ini
     fi
     if ! grep -q "ENABLE_GZIP" /data/gitea/conf/app.ini; then
         sed -i '/\[server\]/a ENABLE_GZIP = true' /data/gitea/conf/app.ini
@@ -139,6 +176,11 @@ EOF
 PROVIDER = memory
 EOF
     fi
+fi
+
+# Ensure SQLite database runs in WAL mode with normal sync for high performance
+if [ -f /data/gitea/data/gitea.db ]; then
+    sqlite3 /data/gitea/data/gitea.db "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;" 2>/dev/null || true
 fi
 
 # Secure sensitive configuration and SSH keys
@@ -248,6 +290,7 @@ server {
         sub_filter '"/repo/' '"\$http_x_ingress_path/repo/';
         sub_filter '"/api/' '"\$http_x_ingress_path/api/';
         sub_filter '"/avatar/' '"\$http_x_ingress_path/avatar/';
+        sub_filter "appSubUrl: ''" "appSubUrl: '\$http_x_ingress_path'";
 
         proxy_redirect / \$http_x_ingress_path/;
     }

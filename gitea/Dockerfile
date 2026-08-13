@@ -41,7 +41,6 @@ RUN if ! getent group git >/dev/null 2>&1; then addgroup -S -g 1000 git; fi \
 ENV USER=git
 ENV HOME=/data/git
 ENV GITEA_CUSTOM=/data/gitea
-ENV GODEBUG=netdns=go
 ENV GITEA_WORK_DIR=/data/gitea
 
 # Setup directories and compatibility symlinks

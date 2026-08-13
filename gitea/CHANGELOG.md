@@ -1,5 +1,13 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.2.4
+
+- Dynamically inject ROOT_URL, DOMAIN, and SSH settings directly into app.ini on startup
+- Apply environment variables to app.ini before starting Gitea
+- Fix Ingress appSubUrl dynamic binding
+- Optimize SQLite database with WAL mode and normal synchronous PRAGMAs
+- Remove GODEBUG netdns=go to allow standard DNS resolution
+
 ## 0.2.3
 
 - Fix duplicate NGINX directives and variable collision with Alpine base
