@@ -46,13 +46,11 @@ ENV GITEA_CUSTOM=/data/gitea
 ENV GODEBUG=netdns=go
 ENV GITEA_WORK_DIR=/data/gitea
 
-ARG GITEA_VERSION
-ARG GITEA_GPG_KEYID
 RUN \
     ARCH="${BUILD_ARCH}" \
     && if [ "${BUILD_ARCH}" = "aarch64" ]; then ARCH="arm64"; fi \
     && if [ "${BUILD_ARCH}" = "amd64" ]; then ARCH="amd64"; fi \
-    && mkdir -p /app/gitea \
+    && mkdir -p /app/gitea /data/git/.gnupg \
     && curl -SLo /app/gitea/gitea "https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}" \
     && curl -SLo /app/gitea/gitea.asc "https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-${ARCH}.asc" \
     && ( gpg --keyserver keys.openpgp.org --recv-keys "${GITEA_GPG_KEYID}" \
