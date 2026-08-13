@@ -1,5 +1,17 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.2.2
+
+- Optimize web UI navigation performance for both Ingress and reverse proxy
+- Enable Gravatar support while disabling slow Libravatar federated avatar DNS lookups
+- Enable in-memory caching and session handling
+- Switch SQLite to WAL journal mode for concurrent database access
+- Configure NGINX upstream persistent keepalive connection pooling and buffer tuning
+- Restrict Ingress sub_filter strictly to HTML to eliminate JS/CSS buffering overhead
+- Enable static asset caching and GZIP compression
+- Remove dangling static asset symlinks and rely on in-memory bindata
+- Remove redundant default ingress_port in config.yaml to satisfy app linter
+
 ## 0.2.1
 
 - Fix port binding
