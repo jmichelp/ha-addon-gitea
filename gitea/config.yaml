@@ -34,5 +34,5 @@ ports:
 ports_description:
   2222/tcp: "Git SSH Interface"
   3000/tcp: "Gitea Web Interface"
-image: "ghcr.io/jmichelp/{arch}-addon-gitea"
+image: "ghcr.io/jmichelp/app-gitea"
 stage: experimental
