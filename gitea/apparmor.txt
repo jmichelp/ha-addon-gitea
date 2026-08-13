@@ -17,6 +17,7 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /run/{s6,s6-rc*,service}/** ix,
   /package/** ix,
   /command/** ix,
+  /etc/s6-overlay/** rwix,
   /etc/services.d/** rwix,
   /etc/cont-init.d/** rwix,
   /etc/cont-finish.d/** rwix,
@@ -27,8 +28,10 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /usr/lib/bashio/** ix,
   /tmp/** rwk,
 
-  # Access to options.json and other files within your addon
+  # Access to options.json and mapped volumes
   /data/** rw,
+  /ssl/** r,
+  /share/** rw,
 
   # Start new profile for service
   /usr/local/bin/gitea cx -> gitea_bin,
@@ -40,49 +43,65 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
     #include <abstractions/user-tmp>
 
     # Receive signals from S6-Overlay
+    signal (receive) peer=gitea,
     signal (receive) peer=*_gitea,
+    signal (receive),
 
     network tcp,
     network udp,
     network inet,
     network inet6,
 
-    # Access to options.json and other files within your addon
-    /data/** rw,
-
-    # Access to mapped volumes specified in config.json
+    # Access to persistent data and mapped volumes
+    /data/** rwkl,
     /share/** rw,
+    /ssl/** r,
 
     # Access required for service functionality
-    /usr/local/bin/gitea r,
-    /app/gitea/gitea r,
+    /usr/local/bin/gitea rix,
+    /app/gitea/gitea rix,
     /bin/bash rix,
+    /bin/sh rix,
     /bin/echo ix,
     /etc/passwd r,
+    /etc/group r,
     /dev/tty rw,
+    /dev/null rw,
+    /dev/urandom r,
     /etc/mime.types r,
     /proc/sys/net/core/somaxconn r,
     /proc/version r,
+    /proc/cpuinfo r,
+    /proc/meminfo r,
+    /proc/sys/kernel/random/boot_id r,
     /sys/devices/system/cpu/online r,
     /sys/kernel/mm/transparent_hugepage/hpage_pmd_size r,
-    /usr/bin/basename mrix,
-    /usr/bin/bash mrix,
-    /usr/bin/cat mrix,
-    /usr/bin/dash mrix,
+    /usr/bin/basename rix,
+    /usr/bin/bash rix,
+    /usr/bin/cat rix,
+    /usr/bin/dash rix,
     /usr/bin/env rix,
-    /usr/bin/git mrix,
-    /usr/lib/git-core/git mrix,
+    /usr/bin/git rix,
+    /usr/bin/git-lfs rix,
+    /usr/bin/ssh-keygen rix,
+    /usr/bin/gpg rix,
+    /usr/bin/gpgconf rix,
+    /usr/bin/gpg-agent rix,
+    /usr/libexec/git-core/** rix,
+    /usr/lib/git-core/** rix,
     /usr/share/git-core/templates/ r,
     /usr/share/git-core/templates/** r,
 
+    /tmp/** rwkl,
+    owner /tmp/** rwkl,
+
     owner @{HOME}/.gitconfig rw,
-    owner @{HOME}/.gitconfig.lock rw,
-    owner @{HOME}/.ssh/ w,
+    owner @{HOME}/.gitconfig.lock rwk,
+    owner @{HOME}/.ssh/** rwkl,
     owner /proc/*/cpuset r,
-    owner /data/gitea/data/** rwk,
-    owner /data/gitea/data/gitea-repositories/*/*.git/hooks/* mrix,
-    owner /data/gitea/data/gitea-repositories/*/*.git/hooks/*.d/* mrix,
-    owner /data/gitea/log/* rw,
-    owner /data/gitea/conf/* rw,
+    owner /proc/*/stat r,
+    owner /proc/*/statm r,
+    owner /proc/*/status r,
+    owner /data/** rwkl,
   }
 }

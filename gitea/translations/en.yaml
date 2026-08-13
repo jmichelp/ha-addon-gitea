@@ -1,19 +1,22 @@
 configuration:
-  ss:
+  domain:
+    name: Domain / FQDN
+    description: Domain name used to access Gitea (e.g. `gitea.example.com` or `homeassistant.local`).
+  ssl:
     name: Enable SSL
-    description: >-
-      Enable usage of SSL on the Web UI. Useful if you want to use FIDO2
-      security keys as 2FA.
+    description: Enable SSL/TLS encryption for direct Web UI access.
+  certfile:
+    name: SSL Certificate File
+    description: Certificate file located in the /ssl folder (e.g. `fullchain.pem`).
+  keyfile:
+    name: SSL Private Key File
+    description: Private key file located in the /ssl folder (e.g. `privkey.pem`).
+  root_url:
+    name: Root URL
+    description: Optional custom Root URL (e.g. `https://gitea.example.com/`). If omitted, extrapolated from domain and port.
   use_nginx:
     name: Use Nginx reverse proxy
-    description: >-
-      Enables/Disables Nginx reverse proxy for the web interface.
-      It is recommended to enable it if you plan to expose the Web UI
-      to external network as it will enable SSL.
-  domain:
-    name: FQDN
-    description: >-
-      Lower case, without https, e.g. `gitea.example.com`
+    description: Generate Nginx reverse proxy configuration in /share/nginx_proxy/ for the NGINX Home Assistant SSL Proxy add-on.
 network:
-  22/tcp: The Git SSH interface port
-  3000/tcp: The web UI interface port
+  2222/tcp: Git SSH interface port
+  3000/tcp: Gitea Web UI interface port

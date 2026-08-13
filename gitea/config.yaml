@@ -1,45 +1,38 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration#add-on-config
-name: Gitea add-on
-version: "0.0.8"
+name: Gitea
+version: "0.1.0"
 slug: gitea
-description: Gitea add-on for self-hosted code repositories
-url: "https://github.com/jmichelp/ha-addon-gitea/tree/main/gitea"
+description: Self-hosted Git service with code repositories, issues, and pull requests
+url: "https://github.com/jmichelp/ha-addon-gitea"
 arch:
-  - armhf
-  - armv7
   - aarch64
   - amd64
-  - i386
 init: false
-options:
-  ssl: false
-  certfile: fullchain.pem
-  keyfile: privkey.pem
-  domain: homeassistant.local
-  use_nginx: true
-hassio_api: true
-schema:
-  ssl: bool
-  domain: match(^[a-z0-9-.]{1,253}$)
-  certfile: str
-  keyfile: str
-  root_url: str?
-  use_nginx: bool
 ingress: true
 ingress_port: 3000
-services:
-  - mysql:want
-ports:
-  22/tcp: 3022
-  3000/tcp: 3000
-ports_description:
-  22/tcp: "Git SSH Interface"
-  3000/tcp: "Gitea Web Interface"
-# webui: "http://[HOST]:[PORT:3000]/"
-panel_icon: "mdi:mdi-git"
+panel_icon: "mdi:git"
 panel_title: "Gitea"
 map:
   - share:rw
   - ssl:ro
+options:
+  domain: homeassistant.local
+  ssl: false
+  certfile: fullchain.pem
+  keyfile: privkey.pem
+  use_nginx: false
+schema:
+  domain: match(^[a-zA-Z0-9.-]{1,253}$)
+  ssl: bool
+  certfile: str
+  keyfile: str
+  root_url: str?
+  use_nginx: bool
+ports:
+  2222/tcp: 3022
+  3000/tcp: 3000
+ports_description:
+  2222/tcp: "Git SSH Interface"
+  3000/tcp: "Gitea Web Interface"
 image: "ghcr.io/jmichelp/{arch}-addon-gitea"
 stage: experimental

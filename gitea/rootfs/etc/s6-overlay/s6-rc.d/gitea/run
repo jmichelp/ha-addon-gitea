@@ -1,0 +1,79 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Gitea
+# Service run script for Gitea
+# ==============================================================================
+
+bashio::log.info "Starting Gitea daemon..."
+
+bashio::config.require 'domain'
+bashio::config.require 'ssl'
+
+DOMAIN=$(bashio::config 'domain')
+HTTP_PORT="3000"
+
+# Determine SSH port
+SSH_PORT=$(bashio::addon.port 2222)
+if [ -z "${SSH_PORT}" ]; then
+    SSH_PORT=3022
+fi
+
+# Determine Web external port
+WEB_PORT=$(bashio::addon.port 3000)
+if [ -z "${WEB_PORT}" ]; then
+    WEB_PORT=3000
+fi
+
+# Configure SSL
+if bashio::config.true 'ssl'; then
+    bashio::config.require 'certfile'
+    bashio::config.require 'keyfile'
+    CERT_FILE="/ssl/$(bashio::config 'certfile')"
+    KEY_FILE="/ssl/$(bashio::config 'keyfile')"
+
+    if [ ! -f "${CERT_FILE}" ]; then
+        bashio::exit.nok "Certificate file ${CERT_FILE} does not exist!"
+    fi
+    if [ ! -f "${KEY_FILE}" ]; then
+        bashio::exit.nok "Key file ${KEY_FILE} does not exist!"
+    fi
+
+    bashio::log.info "SSL is enabled with certificate: ${CERT_FILE}"
+    PROTOCOL="https"
+    export GITEA__server__CERT_FILE="${CERT_FILE}"
+    export GITEA__server__KEY_FILE="${KEY_FILE}"
+else
+    PROTOCOL="http"
+fi
+
+# Determine ROOT_URL
+if bashio::config.has_value 'root_url'; then
+    ROOT_URL=$(bashio::config 'root_url')
+    bashio::log.info "Using configured ROOT_URL: ${ROOT_URL}"
+else
+    ROOT_URL="${PROTOCOL}://${DOMAIN}:${WEB_PORT}/"
+    bashio::log.info "Using extrapolated ROOT_URL: ${ROOT_URL}"
+fi
+
+# Export environment variables for Gitea
+export USER="git"
+export HOME="/data/git"
+export GITEA_CUSTOM="/data/gitea"
+export GITEA_WORK_DIR="/data/gitea"
+export GODEBUG="netdns=go"
+
+export GITEA__server__PROTOCOL="${PROTOCOL}"
+export GITEA__server__DOMAIN="${DOMAIN}"
+export GITEA__server__SSH_DOMAIN="${DOMAIN}"
+export GITEA__server__ROOT_URL="${ROOT_URL}"
+export GITEA__server__HTTP_PORT="${HTTP_PORT}"
+export GITEA__server__START_SSH_SERVER="true"
+export GITEA__server__DISABLE_SSH="false"
+export GITEA__server__SSH_PORT="${SSH_PORT}"
+export GITEA__server__SSH_LISTEN_PORT="2222"
+
+bashio::log.info "Gitea Web UI listening on port ${HTTP_PORT}, SSH listening on port 2222 (external: ${SSH_PORT})"
+
+# Run Gitea as git user
+exec su-exec git /app/gitea/gitea web -c /data/gitea/conf/app.ini --work-path /data/gitea

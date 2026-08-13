@@ -1,0 +1,96 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Gitea
+# Initialization script for Gitea
+# ==============================================================================
+
+bashio::log.info "Initializing Gitea environment..."
+
+# Ensure required directories exist
+for folder in \
+    /data/gitea \
+    /data/gitea/conf \
+    /data/gitea/data \
+    /data/gitea/log \
+    /data/gitea/ssh \
+    /data/git \
+    /data/git/repositories \
+    /data/git/.ssh; do
+    if [ ! -d "${folder}" ]; then
+        mkdir -p "${folder}"
+    fi
+done
+
+chmod 700 /data/git/.ssh
+chmod 750 /data/git
+chmod 750 /data/gitea
+
+# Ensure proper file ownership
+chown -R git:git /data/gitea /data/git /app/gitea
+
+# Setup default app.ini if not existing
+if [ ! -f /data/gitea/conf/app.ini ]; then
+    bashio::log.info "Creating initial Gitea configuration (app.ini)..."
+    cat <<'EOF' > /data/gitea/conf/app.ini
+APP_NAME = Gitea: Git with a cup of tea
+RUN_USER = git
+WORK_PATH = /data/gitea
+RUN_MODE = prod
+
+[repository]
+ROOT = /data/git/repositories
+DEFAULT_BRANCH = main
+
+[server]
+APP_DATA_PATH = /data/gitea/data
+DOMAIN = homeassistant.local
+SSH_DOMAIN = homeassistant.local
+HTTP_PORT = 3000
+ROOT_URL = http://homeassistant.local:3000/
+DISABLE_SSH = false
+START_SSH_SERVER = true
+SSH_PORT = 3022
+SSH_LISTEN_PORT = 2222
+SSH_KEYGEN_PATH = /usr/bin/ssh-keygen
+SSH_ROOT_PATH = /data/gitea/ssh
+LFS_START_SERVER = true
+OFFLINE_MODE = false
+
+[database]
+DB_TYPE = sqlite3
+PATH = /data/gitea/data/gitea.db
+
+[security]
+INSTALL_LOCK = true
+SECRET_KEY = 
+INTERNAL_TOKEN = 
+
+[service]
+DISABLE_REGISTRATION = false
+REQUIRE_SIGNIN_VIEW = false
+REGISTER_EMAIL_CONFIRM = false
+ENABLE_NOTIFY_MAIL = false
+
+[log]
+MODE = console
+LEVEL = Info
+
+[lfs]
+PATH = /data/gitea/data/lfs
+EOF
+    chown git:git /data/gitea/conf/app.ini
+    chmod 640 /data/gitea/conf/app.ini
+fi
+
+# Configure Nginx reverse proxy if enabled
+if bashio::config.true "use_nginx"; then
+    DOMAIN=$(bashio::config 'domain')
+    PORT=$(bashio::addon.port 3000)
+    if [ -z "${PORT}" ]; then
+        PORT=3000
+    fi
+    bashio::log.info "Configuring Nginx reverse proxy integration for domain ${DOMAIN}..."
+    mkdir -p /share/nginx_proxy
+    sed "s/__DOMAIN__/${DOMAIN}/g; s/__GITEA_PORT__/${PORT}/g" /app/nginx_gitea.conf > /share/nginx_proxy/nginx_gitea.conf
+fi
