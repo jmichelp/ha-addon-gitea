@@ -1,5 +1,11 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.2.5
+
+- Fix Ingress mixed content error on login and 2FA form actions by mapping forwarded HTTPS scheme and hostname
+- Fix Ingress appSubUrl dynamic binding and proxy redirects
+- Optimize external reverse proxy and Ingress with unbuffered low-latency streaming
+
 ## 0.2.4
 
 - Dynamically inject ROOT_URL, DOMAIN, and SSH settings directly into app.ini on startup
