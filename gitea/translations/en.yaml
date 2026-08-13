@@ -1,7 +1,7 @@
 configuration:
   domain:
     name: Domain / FQDN
-    description: Domain name used to access Gitea (e.g. `gitea.example.com` or `homeassistant.local`).
+    description: Domain name used to access Gitea. If using Nginx proxy, use a dedicated hostname/subdomain (e.g. `gitea.example.com` or `gitea.local`).
   ssl:
     name: Enable SSL
     description: Enable SSL/TLS encryption for direct Web UI access.

@@ -19,6 +19,17 @@ Gitea is a painless self-hosted Git service written in Go. It includes repositor
 4. Add your SSH public keys under **User Settings > SSH / GPG Keys**.
 5. Create or migrate your Git repositories!
 
+## Access Modes
+
+### 1. Home Assistant Ingress (Recommended for browser access)
+Open Gitea directly from your Home Assistant sidebar. Authentication and session handling are managed seamlessly by Home Assistant.
+
+### 2. Direct Web Port Access
+Access Gitea directly at `http://<YOUR_HA_IP>:3000/` (or `https://...` if direct `ssl` is enabled). Useful for Git HTTP cloning and direct browser access.
+
+### 3. NGINX Reverse Proxy
+If using the **NGINX Home Assistant SSL Proxy** add-on (`use_nginx: true`), set the `domain` option to a dedicated subdomain (e.g. `gitea.yourdomain.com` or `gitea.local`) rather than sharing the exact same domain as Home Assistant Core, so NGINX routes traffic correctly.
+
 ## SSH Access
 
 The add-on runs Gitea's internal SSH server on port `2222` inside the container, mapped to port `3022` on your Home Assistant host.
@@ -48,7 +59,7 @@ git clone gitea-ha:<username>/<repo>.git
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `domain` | string | `homeassistant.local` | FQDN or hostname used to access Gitea. |
+| `domain` | string | `homeassistant.local` | FQDN or hostname used to access Gitea. If using NGINX proxy, use a dedicated subdomain (e.g. `gitea.local`). |
 | `ssl` | boolean | `false` | Enable SSL/TLS for direct Web UI access. |
 | `certfile` | string | `fullchain.pem` | Certificate filename in `/ssl/`. |
 | `keyfile` | string | `privkey.pem` | Private key filename in `/ssl/`. |

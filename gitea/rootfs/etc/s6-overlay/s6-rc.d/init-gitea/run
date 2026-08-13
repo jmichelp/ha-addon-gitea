@@ -16,7 +16,22 @@ mkdir -p \
     /data/gitea/log \
     /data/gitea/ssh \
     /data/git/repositories \
-    /data/git/.ssh
+    /data/git/.ssh \
+    /run/nginx \
+    /var/log/nginx \
+    /var/lib/nginx \
+    /etc/nginx/http.d
+
+# Link system-installed web assets to work directory so assets resolve under all path configurations
+if [ ! -e /data/gitea/public ]; then
+    ln -sfn /usr/share/webapps/gitea/public /data/gitea/public 2>/dev/null || true
+fi
+if [ ! -e /data/gitea/options ]; then
+    ln -sfn /usr/share/webapps/gitea/options /data/gitea/options 2>/dev/null || true
+fi
+if [ ! -e /data/gitea/templates ]; then
+    ln -sfn /usr/share/webapps/gitea/templates /data/gitea/templates 2>/dev/null || true
+fi
 
 # Ensure directory permissions are 755 without making files executable
 find /data/gitea /data/git -type d -exec chmod 755 {} + 2>/dev/null || true
@@ -40,7 +55,8 @@ STATIC_ROOT_PATH = /usr/share/webapps/gitea
 APP_DATA_PATH = /data/gitea/data
 DOMAIN = homeassistant.local
 SSH_DOMAIN = homeassistant.local
-HTTP_PORT = 3000
+HTTP_ADDR = 127.0.0.1
+HTTP_PORT = 3001
 ROOT_URL = http://homeassistant.local:3000/
 DISABLE_SSH = false
 START_SSH_SERVER = true
@@ -83,7 +99,84 @@ find /data/git/.ssh /data/gitea/ssh -type f -exec chmod 600 {} + 2>/dev/null || 
 # Ensure all Gitea data is owned by git:git
 chown -R git:git /data/gitea /data/git /app/gitea 2>/dev/null || true
 
-# Configure Nginx reverse proxy if enabled
+# Configure Direct Web SSL if enabled
+if bashio::config.true 'ssl' && ! bashio::config.true 'use_nginx'; then
+    CERT_FILE="/ssl/$(bashio::config 'certfile')"
+    KEY_FILE="/ssl/$(bashio::config 'keyfile')"
+    if [ ! -f "${CERT_FILE}" ]; then
+        bashio::exit.nok "Certificate file ${CERT_FILE} does not exist!"
+    fi
+    if [ ! -f "${KEY_FILE}" ]; then
+        bashio::exit.nok "Key file ${KEY_FILE} does not exist!"
+    fi
+    DIRECT_LISTEN="listen 3000 ssl;
+    http2 on;
+    ssl_certificate ${CERT_FILE};
+    ssl_certificate_key ${KEY_FILE};"
+else
+    DIRECT_LISTEN="listen 3000;"
+fi
+
+# Configure internal NGINX for Ingress (8099) and Direct/Custom Domain (3000)
+rm -f /etc/nginx/http.d/default.conf 2>/dev/null || true
+cat <<EOF > /etc/nginx/http.d/gitea.conf
+# Home Assistant Ingress endpoint
+server {
+    listen 8099 default_server;
+
+    allow 127.0.0.1;
+    allow 172.30.32.2;
+    deny all;
+
+    client_max_body_size 512M;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+
+        proxy_set_header Accept-Encoding "";
+        proxy_set_header Host \$http_host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$http_connection;
+
+        sub_filter_once off;
+        sub_filter_types text/html text/javascript application/javascript text/css application/json;
+        sub_filter 'href="/' 'href="\$http_x_ingress_path/';
+        sub_filter 'src="/' 'src="\$http_x_ingress_path/';
+        sub_filter 'action="/' 'action="\$http_x_ingress_path/';
+        sub_filter 'data-url="/' 'data-url="\$http_x_ingress_path/';
+        sub_filter '"/assets/' '"\$http_x_ingress_path/assets/';
+        sub_filter '"/user/' '"\$http_x_ingress_path/user/';
+        sub_filter '"/repo/' '"\$http_x_ingress_path/repo/';
+        sub_filter '"/api/' '"\$http_x_ingress_path/api/';
+        sub_filter '"/avatar/' '"\$http_x_ingress_path/avatar/';
+
+        proxy_redirect / \$http_x_ingress_path/;
+    }
+}
+
+# Direct Web / External Reverse Proxy endpoint
+server {
+    ${DIRECT_LISTEN}
+
+    client_max_body_size 512M;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+
+        proxy_set_header Connection \$http_connection;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+# Configure external Nginx reverse proxy integration if enabled
 if bashio::config.true "use_nginx"; then
     DOMAIN=$(bashio::config 'domain')
     PORT=$(bashio::addon.port 3000)

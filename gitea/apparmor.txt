@@ -21,6 +21,7 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /init ix,
   /bin/** ix,
   /usr/bin/** ix,
+  /usr/sbin/** ix,
   /run/{s6,s6-rc*,service}/** ix,
   /package/** ix,
   /command/** ix,
@@ -41,6 +42,15 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /data/** rwkl,
   /ssl/** r,
   /share/** rwkl,
+
+  # Nginx internal proxy
+  /usr/sbin/nginx rix,
+  /etc/nginx/** r,
+  /var/lib/nginx/** rwkl,
+  /var/log/** rwkl,
+  /var/tmp/** rwkl,
+  /run/nginx/** rwkl,
+  /run/nginx.pid rwkl,
 
   # Start new profile for service
   /usr/bin/gitea cx -> gitea_bin,

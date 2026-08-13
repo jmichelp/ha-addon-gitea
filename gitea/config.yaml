@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration#add-on-config
 name: Gitea
-version: "0.1.5"
+version: "0.2.0"
 slug: gitea
 description: Self-hosted Git service with code repositories, issues, and pull requests
 url: "https://github.com/jmichelp/ha-addon-gitea"
@@ -9,7 +9,7 @@ arch:
   - amd64
 init: false
 ingress: true
-ingress_port: 3000
+ingress_port: 8099
 panel_icon: "mdi:git"
 panel_title: "Gitea"
 map:

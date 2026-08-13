@@ -1,5 +1,10 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.2.0
+
+- Make both ingress and nginx reverse proxy work
+- Fix nginx reverse proxy warning
+
 ## 0.1.5
 
 - Fix static asset path

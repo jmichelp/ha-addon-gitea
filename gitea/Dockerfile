@@ -31,7 +31,8 @@ RUN apk --no-cache add \
     openssh-keygen \
     mailcap \
     tzdata \
-    ca-certificates
+    ca-certificates \
+    nginx
 
 # Ensure git user/group exists with proper home directory
 RUN if ! getent group git >/dev/null 2>&1; then addgroup -S -g 1000 git; fi \
@@ -43,8 +44,8 @@ ENV GITEA_CUSTOM=/data/gitea
 ENV GODEBUG=netdns=go
 ENV GITEA_WORK_DIR=/data/gitea
 
-# Compatibility symlinks for paths
-RUN mkdir -p /app/gitea /data/git/.gnupg \
+# Setup directories and compatibility symlinks
+RUN mkdir -p /app/gitea /data/git/.gnupg /var/log/nginx /var/lib/nginx /run/nginx \
     && ln -sf /usr/bin/gitea /app/gitea/gitea \
     && ln -sf /usr/bin/gitea /usr/local/bin/gitea
 
@@ -56,7 +57,8 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/init-gitea/run \
     /etc/s6-overlay/s6-rc.d/init-gitea/up \
     /etc/s6-overlay/s6-rc.d/gitea/run \
-    /etc/s6-overlay/s6-rc.d/gitea/finish
+    /etc/s6-overlay/s6-rc.d/gitea/finish \
+    /etc/s6-overlay/s6-rc.d/nginx/run
 
 # Build arguments
 ARG BUILD_DATE

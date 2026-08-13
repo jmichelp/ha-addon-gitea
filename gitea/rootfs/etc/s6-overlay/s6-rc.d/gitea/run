@@ -11,7 +11,7 @@ bashio::config.require 'domain'
 bashio::config.require 'ssl'
 
 DOMAIN=$(bashio::config 'domain')
-HTTP_PORT="3000"
+INTERNAL_HTTP_PORT="3001"
 
 # Determine SSH port
 SSH_PORT=$(bashio::addon.port 2222)
@@ -25,29 +25,7 @@ if [ -z "${WEB_PORT}" ]; then
     WEB_PORT=3000
 fi
 
-# Determine protocol and SSL config
-if bashio::config.true 'ssl' && ! bashio::config.true 'use_nginx'; then
-    bashio::config.require 'certfile'
-    bashio::config.require 'keyfile'
-    CERT_FILE="/ssl/$(bashio::config 'certfile')"
-    KEY_FILE="/ssl/$(bashio::config 'keyfile')"
-
-    if [ ! -f "${CERT_FILE}" ]; then
-        bashio::exit.nok "Certificate file ${CERT_FILE} does not exist!"
-    fi
-    if [ ! -f "${KEY_FILE}" ]; then
-        bashio::exit.nok "Key file ${KEY_FILE} does not exist!"
-    fi
-
-    bashio::log.info "SSL is enabled with certificate: ${CERT_FILE}"
-    PROTOCOL="https"
-    export GITEA__server__CERT_FILE="${CERT_FILE}"
-    export GITEA__server__KEY_FILE="${KEY_FILE}"
-else
-    PROTOCOL="http"
-fi
-
-# Determine ROOT_URL
+# Determine protocol and ROOT_URL for external access
 if bashio::config.has_value 'root_url'; then
     ROOT_URL=$(bashio::config 'root_url')
     bashio::log.info "Using configured ROOT_URL: ${ROOT_URL}"
@@ -71,17 +49,18 @@ export GODEBUG="netdns=go"
 
 export GITEA__server__STATIC_ROOT_PATH="/usr/share/webapps/gitea"
 export GITEA__server__APP_DATA_PATH="/data/gitea/data"
-export GITEA__server__PROTOCOL="${PROTOCOL}"
+export GITEA__server__PROTOCOL="http"
+export GITEA__server__HTTP_ADDR="127.0.0.1"
+export GITEA__server__HTTP_PORT="${INTERNAL_HTTP_PORT}"
 export GITEA__server__DOMAIN="${DOMAIN}"
 export GITEA__server__SSH_DOMAIN="${DOMAIN}"
 export GITEA__server__ROOT_URL="${ROOT_URL}"
-export GITEA__server__HTTP_PORT="${HTTP_PORT}"
 export GITEA__server__START_SSH_SERVER="true"
 export GITEA__server__DISABLE_SSH="false"
 export GITEA__server__SSH_PORT="${SSH_PORT}"
 export GITEA__server__SSH_LISTEN_PORT="2222"
 
-bashio::log.info "Gitea Web UI listening on port ${HTTP_PORT}, SSH listening on port 2222 (external: ${SSH_PORT})"
+bashio::log.info "Gitea internal backend listening on 127.0.0.1:${INTERNAL_HTTP_PORT}, SSH listening on 2222 (external: ${SSH_PORT})"
 
 # Run Gitea as git user
 exec su-exec git /usr/bin/gitea web -c /data/gitea/conf/app.ini --work-path /data/gitea
