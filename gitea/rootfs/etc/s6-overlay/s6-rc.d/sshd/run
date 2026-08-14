@@ -1,0 +1,15 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Gitea
+# Service run script for OpenSSH Daemon
+# ==============================================================================
+
+if ! bashio::config.equals 'ssh_server' 'openssh'; then
+    exec sleep infinity
+fi
+
+bashio::log.info "Starting OpenSSH daemon on port 2222..."
+
+# Run OpenSSH daemon in foreground
+exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config
