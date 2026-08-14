@@ -542,11 +542,6 @@ else
     ini_set_default "lfs" "PATH" "/data/gitea/data/lfs"
 fi
 
-# Ensure SQLite database runs in WAL mode with normal sync for high performance
-if [ -f /data/gitea/data/gitea.db ]; then
-    sqlite3 /data/gitea/data/gitea.db "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;" 2>/dev/null || true
-fi
-
 # Secure sensitive configuration and SSH keys
 chmod 640 /data/gitea/conf/app.ini 2>/dev/null || true
 chmod 600 /data/gitea/conf/secret_key /data/gitea/conf/internal_token /data/gitea/conf/jwt_secret /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true
@@ -555,6 +550,15 @@ find /data/git/.ssh /data/gitea/ssh -type f -name "*_key" -exec chmod 600 {} + 2
 
 # Ensure all Gitea data is owned by git:git
 chown -R git:git /data/gitea /data/git /app/gitea 2>/dev/null || true
+
+# Initialize / migrate database schema to ensure all tables exist
+bashio::log.info "Initializing / updating Gitea database schema..."
+su-exec git /usr/bin/gitea migrate -c /data/gitea/conf/app.ini --work-path /data/gitea 2>&1 || true
+
+# Ensure SQLite database runs in WAL mode with normal sync for high performance
+if [ -f /data/gitea/data/gitea.db ]; then
+    sqlite3 /data/gitea/data/gitea.db "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;" 2>/dev/null || true
+fi
 
 # Run Gitea doctor check to display diagnostics in logs (experimental stage)
 bashio::log.info "Running Gitea doctor diagnostics..."
