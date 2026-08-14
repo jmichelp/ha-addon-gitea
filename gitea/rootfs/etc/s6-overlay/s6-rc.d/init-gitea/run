@@ -686,42 +686,110 @@ server {
         sub_filter 'https://${DOMAIN}' '\$http_x_ingress_path';
         sub_filter '${ROOT_URL}' '\$http_x_ingress_path/';
         sub_filter '${ROOT_URL%/}' '\$http_x_ingress_path';
+
+        # HTML element attributes
         sub_filter 'href="/assets/' 'href="\$http_x_ingress_path/assets/';
         sub_filter 'src="/assets/' 'src="\$http_x_ingress_path/assets/';
         sub_filter 'action="/assets/' 'action="\$http_x_ingress_path/assets/';
+        sub_filter 'content="/assets/' 'content="\$http_x_ingress_path/assets/';
         sub_filter 'href="/' 'href="\$http_x_ingress_path/';
         sub_filter 'src="/' 'src="\$http_x_ingress_path/';
         sub_filter 'action="/' 'action="\$http_x_ingress_path/';
+        sub_filter 'formaction="/' 'formaction="\$http_x_ingress_path/';
         sub_filter 'data-url="/' 'data-url="\$http_x_ingress_path/';
-        sub_filter 'content="/assets/' 'content="\$http_x_ingress_path/assets/';
-        sub_filter '"/assets"' '"\$http_x_ingress_path/assets"';
-        sub_filter "'/assets'" "'\$http_x_ingress_path/assets'";
-        sub_filter '"/assets/' '"\$http_x_ingress_path/assets/';
-        sub_filter "'/assets/" "'\$http_x_ingress_path/assets/";
+        sub_filter 'data-link="/' 'data-link="\$http_x_ingress_path/';
+        sub_filter 'data-src="/' 'data-src="\$http_x_ingress_path/';
+        sub_filter 'data-href="/' 'data-href="\$http_x_ingress_path/';
+        sub_filter 'data-action="/' 'data-action="\$http_x_ingress_path/';
+        sub_filter 'data-fetch-url="/' 'data-fetch-url="\$http_x_ingress_path/';
+        sub_filter 'data-preview-url="/' 'data-preview-url="\$http_x_ingress_path/';
+        sub_filter 'data-query-url="/' 'data-query-url="\$http_x_ingress_path/';
+
+        # HTMX attributes
+        sub_filter 'hx-get="/' 'hx-get="\$http_x_ingress_path/';
+        sub_filter 'hx-post="/' 'hx-post="\$http_x_ingress_path/';
+        sub_filter 'hx-delete="/' 'hx-delete="\$http_x_ingress_path/';
+        sub_filter 'hx-put="/' 'hx-put="\$http_x_ingress_path/';
+        sub_filter 'hx-patch="/' 'hx-patch="\$http_x_ingress_path/';
+        sub_filter 'hx-push-url="/' 'hx-push-url="\$http_x_ingress_path/';
+        sub_filter 'hx-target="/' 'hx-target="\$http_x_ingress_path/';
+        sub_filter 'hx-indicator="/' 'hx-indicator="\$http_x_ingress_path/';
+
+        # CSS asset references
         sub_filter 'url(/assets/' 'url(\$http_x_ingress_path/assets/';
         sub_filter 'url("/assets/' 'url("\$http_x_ingress_path/assets/';
         sub_filter "url('/assets/" "url('\$http_x_ingress_path/assets/";
-        sub_filter '"/user/' '"\$http_x_ingress_path/user/';
-        sub_filter '"/repo/' '"\$http_x_ingress_path/repo/';
-        sub_filter '"/api/' '"\$http_x_ingress_path/api/';
-        sub_filter '"/avatar/' '"\$http_x_ingress_path/avatar/';
+        sub_filter 'url(/custom/' 'url(\$http_x_ingress_path/custom/';
+        sub_filter 'url("/custom/' 'url("\$http_x_ingress_path/custom/';
+        sub_filter "url('/custom/" "url('\$http_x_ingress_path/custom/";
+
+        # Static assets and custom path JS strings
+        sub_filter '"/assets/"' '"\$http_x_ingress_path/assets/"';
+        sub_filter "'/assets/'" "'\$http_x_ingress_path/assets/'";
+        sub_filter '"/assets/' '"\$http_x_ingress_path/assets/';
+        sub_filter "'/assets/" "'\$http_x_ingress_path/assets/";
+        sub_filter '"/assets"' '"\$http_x_ingress_path/assets"';
+        sub_filter "'/assets'" "'\$http_x_ingress_path/assets'";
+        sub_filter '"/custom/"' '"\$http_x_ingress_path/custom/"';
+        sub_filter "'/custom/'" "'\$http_x_ingress_path/custom/'";
         sub_filter '"/custom/' '"\$http_x_ingress_path/custom/';
+        sub_filter "'/custom/" "'\$http_x_ingress_path/custom/";
         sub_filter '"/custom"' '"\$http_x_ingress_path/custom"';
         sub_filter "'/custom'" "'\$http_x_ingress_path/custom'";
-        sub_filter '"AppSubUrl": ""' '"AppSubUrl": "\$http_x_ingress_path"';
-        sub_filter '"AppSubUrl":""' '"AppSubUrl":"\$http_x_ingress_path"';
+
+        # Internal routes and API endpoints in JS
+        sub_filter '"/-/' '"\$http_x_ingress_path/-/';
+        sub_filter "'/-/'" "'\$http_x_ingress_path/-/'";
+        sub_filter '"/user/' '"\$http_x_ingress_path/user/';
+        sub_filter "'/user/'" "'\$http_x_ingress_path/user/'";
+        sub_filter '"/repo/' '"\$http_x_ingress_path/repo/';
+        sub_filter "'/repo/'" "'\$http_x_ingress_path/repo/'";
+        sub_filter '"/api/' '"\$http_x_ingress_path/api/';
+        sub_filter "'/api/'" "'\$http_x_ingress_path/api/'";
+        sub_filter '"/avatar/' '"\$http_x_ingress_path/avatar/';
+        sub_filter "'/avatar/'" "'\$http_x_ingress_path/avatar/'";
+        sub_filter '"/org/' '"\$http_x_ingress_path/org/';
+        sub_filter "'/org/'" "'\$http_x_ingress_path/org/'";
+        sub_filter '"/admin/' '"\$http_x_ingress_path/admin/';
+        sub_filter "'/admin/'" "'\$http_x_ingress_path/admin/'";
+        sub_filter '"/notifications"' '"\$http_x_ingress_path/notifications"';
+        sub_filter "'/notifications'" "'\$http_x_ingress_path/notifications'";
+        sub_filter '"/explore/' '"\$http_x_ingress_path/explore/';
+        sub_filter "'/explore/'" "'\$http_x_ingress_path/explore/'";
+
+        # Gitea window.config frontend variables
+        sub_filter 'appSubUrl: ""' 'appSubUrl: "\$http_x_ingress_path"';
+        sub_filter "appSubUrl: ''" "appSubUrl: '\$http_x_ingress_path'";
+        sub_filter 'AppSubUrl: ""' 'AppSubUrl: "\$http_x_ingress_path"';
+        sub_filter "AppSubUrl: ''" "AppSubUrl: '\$http_x_ingress_path'";
         sub_filter '"appSubUrl": ""' '"appSubUrl": "\$http_x_ingress_path"';
         sub_filter '"appSubUrl":""' '"appSubUrl":"\$http_x_ingress_path"';
-        sub_filter '"StaticUrlPrefix": ""' '"StaticUrlPrefix": "\$http_x_ingress_path"';
-        sub_filter '"StaticUrlPrefix":""' '"StaticUrlPrefix":"\$http_x_ingress_path"';
+        sub_filter '"AppSubUrl": ""' '"AppSubUrl": "\$http_x_ingress_path"';
+        sub_filter '"AppSubUrl":""' '"AppSubUrl":"\$http_x_ingress_path"';
+        sub_filter 'staticUrlPrefix: ""' 'staticUrlPrefix: "\$http_x_ingress_path"';
+        sub_filter "staticUrlPrefix: ''" "staticUrlPrefix: '\$http_x_ingress_path'";
+        sub_filter 'StaticUrlPrefix: ""' 'StaticUrlPrefix: "\$http_x_ingress_path"';
+        sub_filter "StaticUrlPrefix: ''" "StaticUrlPrefix: '\$http_x_ingress_path'";
         sub_filter '"staticUrlPrefix": ""' '"staticUrlPrefix": "\$http_x_ingress_path"';
         sub_filter '"staticUrlPrefix":""' '"staticUrlPrefix":"\$http_x_ingress_path"';
-        sub_filter "AppSubUrl: ''" "AppSubUrl: '\$http_x_ingress_path'";
-        sub_filter "appSubUrl: ''" "appSubUrl: '\$http_x_ingress_path'";
-        sub_filter "StaticUrlPrefix: ''" "StaticUrlPrefix: '\$http_x_ingress_path'";
-        sub_filter "staticUrlPrefix: ''" "staticUrlPrefix: '\$http_x_ingress_path'";
-        sub_filter "AssetUrlPrefix: '/assets'" "AssetUrlPrefix: '\$http_x_ingress_path/assets'";
+        sub_filter '"StaticUrlPrefix": ""' '"StaticUrlPrefix": "\$http_x_ingress_path"';
+        sub_filter '"StaticUrlPrefix":""' '"StaticUrlPrefix":"\$http_x_ingress_path"';
+        sub_filter 'assetUrlPrefix: "/assets"' 'assetUrlPrefix: "\$http_x_ingress_path/assets"';
         sub_filter "assetUrlPrefix: '/assets'" "assetUrlPrefix: '\$http_x_ingress_path/assets'";
+        sub_filter 'AssetUrlPrefix: "/assets"' 'AssetUrlPrefix: "\$http_x_ingress_path/assets"';
+        sub_filter "AssetUrlPrefix: '/assets'" "AssetUrlPrefix: '\$http_x_ingress_path/assets'";
+        sub_filter '"assetUrlPrefix": "/assets"' '"assetUrlPrefix": "\$http_x_ingress_path/assets"';
+        sub_filter '"assetUrlPrefix":"/assets"' '"assetUrlPrefix":"\$http_x_ingress_path/assets"';
+        sub_filter '"AssetUrlPrefix": "/assets"' '"AssetUrlPrefix": "\$http_x_ingress_path/assets"';
+        sub_filter '"AssetUrlPrefix":"/assets"' '"AssetUrlPrefix":"\$http_x_ingress_path/assets"';
+        sub_filter 'customUrlPrefix: "/custom"' 'customUrlPrefix: "\$http_x_ingress_path/custom"';
+        sub_filter "customUrlPrefix: '/custom'" "customUrlPrefix: '\$http_x_ingress_path/custom'";
+        sub_filter 'CustomUrlPrefix: "/custom"' 'CustomUrlPrefix: "\$http_x_ingress_path/custom"';
+        sub_filter "CustomUrlPrefix: '/custom'" "CustomUrlPrefix: '\$http_x_ingress_path/custom'";
+        sub_filter '"customUrlPrefix": "/custom"' '"customUrlPrefix": "\$http_x_ingress_path/custom"';
+        sub_filter '"customUrlPrefix":"/custom"' '"customUrlPrefix":"\$http_x_ingress_path/custom"';
+        sub_filter '"CustomUrlPrefix": "/custom"' '"CustomUrlPrefix": "\$http_x_ingress_path/custom"';
+        sub_filter '"CustomUrlPrefix":"/custom"' '"CustomUrlPrefix":"\$http_x_ingress_path/custom"';
 
         proxy_cookie_path / \$http_x_ingress_path/;
         proxy_redirect http://\$http_host/ \$http_x_ingress_path/;
