@@ -1,5 +1,9 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.3.4
+
+- Almost there... Let's hope the worker now is covered
+
 ## 0.3.3
 
 - Inject JS to hopefully fix Ingress
