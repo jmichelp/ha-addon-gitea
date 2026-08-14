@@ -650,6 +650,9 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection \$gitea_connection_upgrade;
 
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+
         sub_filter_once off;
         sub_filter_types *;
         sub_filter_last_modified on;

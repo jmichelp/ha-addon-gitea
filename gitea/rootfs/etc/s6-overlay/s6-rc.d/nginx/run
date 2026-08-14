@@ -7,4 +7,9 @@
 
 bashio::log.info "Starting internal NGINX proxy..."
 
+if ! nginx -t 2>/dev/null; then
+    bashio::log.error "NGINX configuration test failed:"
+    nginx -t
+fi
+
 exec nginx -g "daemon off;"
