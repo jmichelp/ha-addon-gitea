@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration#add-on-config
 name: Gitea
-version: "0.3.0"
+version: "0.3.1"
 slug: gitea
 description: Self-hosted Git service with code repositories, issues, and pull requests
 url: "https://github.com/jmichelp/ha-addon-gitea"
@@ -22,6 +22,8 @@ options:
   use_nginx: false
   ssh_server: builtin
   password_check_pwn: false
+  disable_registration: false
+  require_signin_view: false
   mailer_enabled: false
   mailer_protocol: starttls
   mailer_smtp_addr: ""
@@ -54,6 +56,8 @@ schema:
   use_nginx: bool
   ssh_server: list(builtin|openssh)?
   password_check_pwn: bool?
+  disable_registration: bool?
+  require_signin_view: bool?
   mailer_enabled: bool?
   mailer_protocol: list(smtp|smtps|starttls|sendmail|dummy)?
   mailer_smtp_addr: str?

@@ -1,5 +1,10 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.3.1
+
+- Fix nginx reverse proxy configuration
+- Add optiosn to disable account creation
+
 ## 0.3.0
 
 - Automatic app.ini template detection, synchronization, and migration on startup

@@ -67,6 +67,8 @@ git clone gitea-ha:<username>/<repo>.git
 | `use_nginx` | boolean | `false` | Generate reverse proxy configuration for the NGINX SSL Proxy add-on. |
 | `ssh_server` | string | `builtin` | SSH server implementation (`builtin` for Gitea's embedded server, or `openssh` for OpenSSH daemon). |
 | `password_check_pwn` | boolean | `false` | Check passwords against HaveIBeenPwned API on user registration/password changes. |
+| `disable_registration` | boolean | `false` | Disable public user self-registration. New accounts must be created by an administrator. |
+| `require_signin_view` | boolean | `false` | Require users to sign in before they can view any repositories or pages. |
 | `mailer_enabled` | boolean | `false` | Enable email notification and registration confirmation service. |
 | `mailer_protocol` | string | `starttls` | SMTP protocol (`starttls`, `smtps`, `smtp`, `sendmail`, `dummy`). |
 | `mailer_smtp_addr` | string | `""` | SMTP server hostname or IP address. |

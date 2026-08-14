@@ -54,7 +54,7 @@ export GITEA__server__DOMAIN="${DOMAIN}"
 export GITEA__server__SSH_DOMAIN="${DOMAIN}"
 export GITEA__server__ROOT_URL="${ROOT_URL}"
 export GITEA__server__OFFLINE_MODE="false"
-export GITEA__server__ENABLE_GZIP="true"
+export GITEA__server__ENABLE_GZIP="false"
 export GITEA__service__DISABLE_GRAVATAR="false"
 export GITEA__service__ENABLE_FEDERATED_AVATAR="false"
 if bashio::config.equals 'ssh_server' 'openssh'; then

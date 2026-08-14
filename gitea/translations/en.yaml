@@ -23,6 +23,12 @@ configuration:
   password_check_pwn:
     name: Check Exposed Passwords (HaveIBeenPwned)
     description: Check passwords against HaveIBeenPwned to prevent users from using leaked passwords.
+  disable_registration:
+    name: Disable Self-Registration
+    description: Prevent users from self-registering accounts. Accounts can only be created by administrators.
+  require_signin_view:
+    name: Require Sign-In to View
+    description: Require visitors to log in to view any repositories, explore pages, or user profiles.
   mailer_enabled:
     name: Enable Email Notifications
     description: Enable the mailer service for email notifications and user account registration confirmations.

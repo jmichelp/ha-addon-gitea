@@ -131,6 +131,17 @@ if bashio::config.true 'password_check_pwn'; then
     PASSWORD_CHECK_PWN="true"
 fi
 
+# Registration and access policies
+DISABLE_REGISTRATION="false"
+if bashio::config.true 'disable_registration'; then
+    DISABLE_REGISTRATION="true"
+fi
+
+REQUIRE_SIGNIN_VIEW="false"
+if bashio::config.true 'require_signin_view'; then
+    REQUIRE_SIGNIN_VIEW="true"
+fi
+
 # Mailer configuration
 MAILER_ENABLED="false"
 MAILER_PROTOCOL="starttls"
@@ -420,8 +431,8 @@ RP_ID = ${DOMAIN}
 RP_ORIGIN = ${RP_ORIGIN}
 
 [service]
-DISABLE_REGISTRATION = false
-REQUIRE_SIGNIN_VIEW = false
+DISABLE_REGISTRATION = ${DISABLE_REGISTRATION}
+REQUIRE_SIGNIN_VIEW = ${REQUIRE_SIGNIN_VIEW}
 REGISTER_EMAIL_CONFIRM = ${REGISTER_EMAIL_CONFIRM}
 ENABLE_NOTIFY_MAIL = ${MAILER_ENABLED}
 DISABLE_GRAVATAR = false
@@ -510,8 +521,8 @@ else
     ini_set "security" "RP_ID" "${DOMAIN}"
     ini_set "security" "RP_ORIGIN" "${RP_ORIGIN}"
 
-    ini_set_default "service" "DISABLE_REGISTRATION" "false"
-    ini_set_default "service" "REQUIRE_SIGNIN_VIEW" "false"
+    ini_set "service" "DISABLE_REGISTRATION" "${DISABLE_REGISTRATION}"
+    ini_set "service" "REQUIRE_SIGNIN_VIEW" "${REQUIRE_SIGNIN_VIEW}"
     ini_set "service" "REGISTER_EMAIL_CONFIRM" "${REGISTER_EMAIL_CONFIRM}"
     ini_set "service" "ENABLE_NOTIFY_MAIL" "${MAILER_ENABLED}"
     ini_set "service" "DISABLE_GRAVATAR" "false"
@@ -628,6 +639,9 @@ map \$http_x_forwarded_host \$direct_host {
 server {
     listen 8099 default_server;
 
+    absolute_redirect off;
+    port_in_redirect off;
+
     allow 127.0.0.1;
     allow 172.30.32.2;
     deny all;
@@ -662,9 +676,16 @@ server {
         sub_filter 'https://\$host:8099/' '\$http_x_ingress_path/';
         sub_filter 'http://\$host/' '\$http_x_ingress_path/';
         sub_filter 'https://\$host/' '\$http_x_ingress_path/';
+        sub_filter 'http://${DOMAIN}:${WEB_PORT}/' '\$http_x_ingress_path/';
+        sub_filter 'https://${DOMAIN}:${WEB_PORT}/' '\$http_x_ingress_path/';
+        sub_filter 'http://${DOMAIN}:${WEB_PORT}' '\$http_x_ingress_path';
+        sub_filter 'https://${DOMAIN}:${WEB_PORT}' '\$http_x_ingress_path';
         sub_filter 'http://${DOMAIN}/' '\$http_x_ingress_path/';
         sub_filter 'https://${DOMAIN}/' '\$http_x_ingress_path/';
+        sub_filter 'http://${DOMAIN}' '\$http_x_ingress_path';
+        sub_filter 'https://${DOMAIN}' '\$http_x_ingress_path';
         sub_filter '${ROOT_URL}' '\$http_x_ingress_path/';
+        sub_filter '${ROOT_URL%/}' '\$http_x_ingress_path';
         sub_filter 'href="/assets/' 'href="\$http_x_ingress_path/assets/';
         sub_filter 'src="/assets/' 'src="\$http_x_ingress_path/assets/';
         sub_filter 'action="/assets/' 'action="\$http_x_ingress_path/assets/';
@@ -709,8 +730,13 @@ server {
         proxy_redirect https://\$host:8099/ \$http_x_ingress_path/;
         proxy_redirect http://\$host/ \$http_x_ingress_path/;
         proxy_redirect https://\$host/ \$http_x_ingress_path/;
+        proxy_redirect http://${DOMAIN}:${WEB_PORT}/ \$http_x_ingress_path/;
+        proxy_redirect https://${DOMAIN}:${WEB_PORT}/ \$http_x_ingress_path/;
         proxy_redirect http://${DOMAIN}/ \$http_x_ingress_path/;
         proxy_redirect https://${DOMAIN}/ \$http_x_ingress_path/;
+        proxy_redirect http://127.0.0.1:3001/ \$http_x_ingress_path/;
+        proxy_redirect http://gitea_backend/ \$http_x_ingress_path/;
+        proxy_redirect http://localhost:3001/ \$http_x_ingress_path/;
         proxy_redirect ${ROOT_URL} \$http_x_ingress_path/;
         proxy_redirect / \$http_x_ingress_path/;
     }
@@ -719,6 +745,9 @@ server {
 # Direct Web / External Reverse Proxy endpoint
 server {
     ${DIRECT_LISTEN}
+
+    absolute_redirect off;
+    port_in_redirect off;
 
     client_max_body_size 512M;
     proxy_buffer_size 128k;
