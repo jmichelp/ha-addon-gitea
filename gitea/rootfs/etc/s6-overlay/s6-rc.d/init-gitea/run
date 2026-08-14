@@ -276,30 +276,44 @@ ini_set() {
     local value="$3"
     local file="/data/gitea/conf/app.ini"
 
-    if ! grep -q "^\[${section}\]" "${file}"; then
-        printf "\n[%s]\n%s = %s\n" "${section}" "${key}" "${value}" >> "${file}"
-        return
-    fi
-
-    local section_line
-    section_line=$(grep -n "^\[${section}\]" "${file}" | head -n 1 | cut -d: -f1)
-    local next_section_line
-    next_section_line=$(tail -n +"$((section_line + 1))" "${file}" | grep -n "^\[" | head -n 1 | cut -d: -f1)
-
-    if [ -n "${next_section_line}" ]; then
-        local end_line=$((section_line + next_section_line - 1))
-        if sed -n "${section_line},${end_line}p" "${file}" | grep -q "^${key}[[:space:]]*="; then
-            sed -i "${section_line},${end_line}{s|^${key}[[:space:]]*=.*|${key} = ${value}|;}" "${file}"
-        else
-            sed -i "${section_line}a ${key} = ${value}" "${file}"
-        fi
-    else
-        if tail -n +"${section_line}" "${file}" | grep -q "^${key}[[:space:]]*="; then
-            sed -i "${section_line},\${s|^${key}[[:space:]]*=.*|${key} = ${value}|;}" "${file}"
-        else
-            sed -i "${section_line}a ${key} = ${value}" "${file}"
-        fi
-    fi
+    awk -v s="$section" -v k="$key" -v v="$value" '
+    BEGIN {
+        in_section = 0
+        section_found = 0
+        key_found = 0
+    }
+    /^\[.*\]/ {
+        if ($0 ~ "^\\[" s "\\]") {
+            in_section = 1
+            section_found = 1
+        } else {
+            if (in_section && !key_found) {
+                print k " = " v
+                key_found = 1
+            }
+            in_section = 0
+        }
+        print $0
+        next
+    }
+    {
+        if (in_section && $0 ~ "^" k "[[:space:]]*=") {
+            print k " = " v
+            key_found = 1
+            next
+        }
+        print $0
+    }
+    END {
+        if (!section_found) {
+            print ""
+            print "[" s "]"
+            print k " = " v
+        } else if (in_section && !key_found) {
+            print k " = " v
+        }
+    }
+    ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 }
 
 ini_set_default() {
@@ -308,26 +322,42 @@ ini_set_default() {
     local value="$3"
     local file="/data/gitea/conf/app.ini"
 
-    if ! grep -q "^\[${section}\]" "${file}"; then
-        printf "\n[%s]\n%s = %s\n" "${section}" "${key}" "${value}" >> "${file}"
-        return
-    fi
-
-    local section_line
-    section_line=$(grep -n "^\[${section}\]" "${file}" | head -n 1 | cut -d: -f1)
-    local next_section_line
-    next_section_line=$(tail -n +"$((section_line + 1))" "${file}" | grep -n "^\[" | head -n 1 | cut -d: -f1)
-
-    if [ -n "${next_section_line}" ]; then
-        local end_line=$((section_line + next_section_line - 1))
-        if ! sed -n "${section_line},${end_line}p" "${file}" | grep -q "^${key}[[:space:]]*="; then
-            sed -i "${section_line}a ${key} = ${value}" "${file}"
-        fi
-    else
-        if ! tail -n +"${section_line}" "${file}" | grep -q "^${key}[[:space:]]*="; then
-            sed -i "${section_line}a ${key} = ${value}" "${file}"
-        fi
-    fi
+    awk -v s="$section" -v k="$key" -v v="$value" '
+    BEGIN {
+        in_section = 0
+        section_found = 0
+        key_found = 0
+    }
+    /^\[.*\]/ {
+        if ($0 ~ "^\\[" s "\\]") {
+            in_section = 1
+            section_found = 1
+        } else {
+            if (in_section && !key_found) {
+                print k " = " v
+                key_found = 1
+            }
+            in_section = 0
+        }
+        print $0
+        next
+    }
+    {
+        if (in_section && $0 ~ "^" k "[[:space:]]*=") {
+            key_found = 1
+        }
+        print $0
+    }
+    END {
+        if (!section_found) {
+            print ""
+            print "[" s "]"
+            print k " = " v
+        } else if (in_section && !key_found) {
+            print k " = " v
+        }
+    }
+    ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 }
 
 # Setup or upgrade app.ini
