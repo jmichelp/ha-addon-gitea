@@ -70,8 +70,5 @@ export GITEA__server__SSH_LISTEN_PORT="2222"
 
 bashio::log.info "Gitea internal backend listening on 127.0.0.1:${INTERNAL_HTTP_PORT}, SSH listening on 2222 (external: ${SSH_PORT})"
 
-# Apply environment overrides to app.ini
-su-exec git /usr/bin/gitea config edit-ini --in-place --apply-env -c /data/gitea/conf/app.ini --work-path /data/gitea 2>/dev/null || true
-
 # Run Gitea as git user
 exec su-exec git /usr/bin/gitea web -c /data/gitea/conf/app.ini --work-path /data/gitea

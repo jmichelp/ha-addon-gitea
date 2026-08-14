@@ -556,6 +556,10 @@ find /data/git/.ssh /data/gitea/ssh -type f -name "*_key" -exec chmod 600 {} + 2
 # Ensure all Gitea data is owned by git:git
 chown -R git:git /data/gitea /data/git /app/gitea 2>/dev/null || true
 
+# Run Gitea doctor check to display diagnostics in logs (experimental stage)
+bashio::log.info "Running Gitea doctor diagnostics..."
+su-exec git /usr/bin/gitea doctor check --all -c /data/gitea/conf/app.ini --work-path /data/gitea 2>&1 || true
+
 # Configure Direct Web SSL if enabled
 if bashio::config.true 'ssl' && ! bashio::config.true 'use_nginx'; then
     CERT_FILE="/ssl/$(bashio::config 'certfile')"
@@ -647,7 +651,7 @@ server {
         proxy_buffering off;
 
         sub_filter_once off;
-        sub_filter_types text/html;
+        sub_filter_types text/html text/javascript application/javascript application/json text/xml text/css;
         sub_filter 'http://\$http_host/' '\$http_x_ingress_path/';
         sub_filter 'https://\$http_host/' '\$http_x_ingress_path/';
         sub_filter 'http://\$host:8099/' '\$http_x_ingress_path/';
@@ -661,12 +665,22 @@ server {
         sub_filter 'src="/' 'src="\$http_x_ingress_path/';
         sub_filter 'action="/' 'action="\$http_x_ingress_path/';
         sub_filter 'data-url="/' 'data-url="\$http_x_ingress_path/';
+        sub_filter 'content="/assets/' 'content="\$http_x_ingress_path/assets/';
         sub_filter '"/assets/' '"\$http_x_ingress_path/assets/';
+        sub_filter "'/assets/" "'\$http_x_ingress_path/assets/";
+        sub_filter 'url(/assets/' 'url(\$http_x_ingress_path/assets/';
+        sub_filter 'url("/assets/' 'url("\$http_x_ingress_path/assets/';
+        sub_filter "url('/assets/" "url('\$http_x_ingress_path/assets/";
         sub_filter '"/user/' '"\$http_x_ingress_path/user/';
         sub_filter '"/repo/' '"\$http_x_ingress_path/repo/';
         sub_filter '"/api/' '"\$http_x_ingress_path/api/';
         sub_filter '"/avatar/' '"\$http_x_ingress_path/avatar/';
+        sub_filter "AppSubUrl: ''" "AppSubUrl: '\$http_x_ingress_path'";
         sub_filter "appSubUrl: ''" "appSubUrl: '\$http_x_ingress_path'";
+        sub_filter "StaticUrlPrefix: ''" "StaticUrlPrefix: '\$http_x_ingress_path'";
+        sub_filter "staticUrlPrefix: ''" "staticUrlPrefix: '\$http_x_ingress_path'";
+        sub_filter "AssetUrlPrefix: '/assets'" "AssetUrlPrefix: '\$http_x_ingress_path/assets'";
+        sub_filter "assetUrlPrefix: '/assets'" "assetUrlPrefix: '\$http_x_ingress_path/assets'";
 
         proxy_cookie_path / \$http_x_ingress_path/;
         proxy_redirect http://\$http_host/ \$http_x_ingress_path/;
