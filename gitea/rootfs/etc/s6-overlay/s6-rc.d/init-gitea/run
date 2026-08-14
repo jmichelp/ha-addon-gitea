@@ -77,10 +77,13 @@ AcceptEnv GIT_PROTOCOL
 Subsystem sftp /usr/lib/ssh/sftp-server
 EOF
 
-# Ensure git user authorized_keys file exists
+# Ensure git user authorized_keys file exists and is linked
 touch /data/git/.ssh/authorized_keys
 chmod 600 /data/git/.ssh/authorized_keys
 chmod 700 /data/git/.ssh
+ln -sf /data/git/.ssh/authorized_keys /data/gitea/ssh/authorized_keys 2>/dev/null || touch /data/gitea/ssh/authorized_keys
+chmod 600 /data/gitea/ssh/authorized_keys 2>/dev/null || true
+chmod 700 /data/gitea/ssh
 
 # Calculate configuration parameters
 bashio::config.require 'domain'
@@ -269,6 +272,12 @@ fi
 chmod 600 /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true
 chown git:git /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true
 
+# Extract raw secret keys for dual URI/inline support
+SECRET_KEY_VAL=$(cat /data/gitea/conf/secret_key 2>/dev/null || true)
+INTERNAL_TOKEN_VAL=$(cat /data/gitea/conf/internal_token 2>/dev/null || true)
+JWT_SECRET_VAL=$(cat /data/gitea/conf/jwt_secret 2>/dev/null || true)
+LFS_JWT_SECRET_VAL=$(cat /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true)
+
 # Helper function to set or replace key in ini file
 ini_set() {
     local section="$1"
@@ -385,8 +394,9 @@ START_SSH_SERVER = ${START_SSH_SERVER}
 SSH_PORT = ${SSH_PORT}
 SSH_LISTEN_PORT = 2222
 SSH_KEYGEN_PATH = /usr/bin/ssh-keygen
-SSH_ROOT_PATH = /data/gitea/ssh
+SSH_ROOT_PATH = /data/git/.ssh
 LFS_START_SERVER = true
+LFS_JWT_SECRET = ${LFS_JWT_SECRET_VAL}
 LFS_JWT_SECRET_URI = file:/data/gitea/conf/lfs_jwt_secret
 OFFLINE_MODE = false
 ENABLE_GZIP = true
@@ -399,7 +409,9 @@ SQLITE_TIMEOUT = 20000
 
 [security]
 INSTALL_LOCK = true
+SECRET_KEY = ${SECRET_KEY_VAL}
 SECRET_KEY_URI = file:/data/gitea/conf/secret_key
+INTERNAL_TOKEN = ${INTERNAL_TOKEN_VAL}
 INTERNAL_TOKEN_URI = file:/data/gitea/conf/internal_token
 PASSWORD_HASH_ALGO = argon2
 PASSWORD_CHECK_PWN = ${PASSWORD_CHECK_PWN}
@@ -442,6 +454,7 @@ HELO_HOSTNAME = ${MAILER_HELO_HOSTNAME}
 FORCE_TRUST_SERVER_CERT = ${MAILER_FORCE_TRUST_CERT}
 
 [oauth2]
+JWT_SECRET = ${JWT_SECRET_VAL}
 JWT_SECRET_URI = file:/data/gitea/conf/jwt_secret
 
 [cache]
@@ -461,7 +474,7 @@ EOF
 else
     bashio::log.info "Upgrading and synchronizing Gitea configuration (app.ini)..."
     # Remove obsolete keys and cleanup legacy symlink paths
-    sed -i '/STATIC_ROOT_PATH/d; /^SECRET_KEY =/d; /^INTERNAL_TOKEN =/d' /data/gitea/conf/app.ini
+    sed -i '/STATIC_ROOT_PATH/d' /data/gitea/conf/app.ini
 
     # Synchronize template baseline defaults
     ini_set_default "repository" "ROOT" "/data/git/repositories"
@@ -477,8 +490,9 @@ else
     ini_set "server" "START_SSH_SERVER" "${START_SSH_SERVER}"
     ini_set_default "server" "DISABLE_SSH" "false"
     ini_set_default "server" "SSH_KEYGEN_PATH" "/usr/bin/ssh-keygen"
-    ini_set_default "server" "SSH_ROOT_PATH" "/data/gitea/ssh"
+    ini_set "server" "SSH_ROOT_PATH" "/data/git/.ssh"
     ini_set_default "server" "LFS_START_SERVER" "true"
+    ini_set "server" "LFS_JWT_SECRET" "${LFS_JWT_SECRET_VAL}"
     ini_set "server" "LFS_JWT_SECRET_URI" "file:/data/gitea/conf/lfs_jwt_secret"
     ini_set_default "server" "OFFLINE_MODE" "false"
     ini_set_default "server" "ENABLE_GZIP" "true"
@@ -489,7 +503,9 @@ else
     ini_set "database" "SQLITE_TIMEOUT" "20000"
 
     ini_set_default "security" "INSTALL_LOCK" "true"
+    ini_set "security" "SECRET_KEY" "${SECRET_KEY_VAL}"
     ini_set "security" "SECRET_KEY_URI" "file:/data/gitea/conf/secret_key"
+    ini_set "security" "INTERNAL_TOKEN" "${INTERNAL_TOKEN_VAL}"
     ini_set "security" "INTERNAL_TOKEN_URI" "file:/data/gitea/conf/internal_token"
     ini_set "security" "PASSWORD_HASH_ALGO" "argon2"
     ini_set "security" "PASSWORD_CHECK_PWN" "${PASSWORD_CHECK_PWN}"
@@ -529,6 +545,7 @@ else
     ini_set "mailer" "HELO_HOSTNAME" "${MAILER_HELO_HOSTNAME}"
     ini_set "mailer" "FORCE_TRUST_SERVER_CERT" "${MAILER_FORCE_TRUST_CERT}"
 
+    ini_set "oauth2" "JWT_SECRET" "${JWT_SECRET_VAL}"
     ini_set "oauth2" "JWT_SECRET_URI" "file:/data/gitea/conf/jwt_secret"
 
     ini_set_default "cache" "ADAPTER" "memory"
@@ -620,6 +637,9 @@ server {
     deny all;
 
     client_max_body_size 512M;
+    proxy_buffer_size 128k;
+    proxy_buffers 4 256k;
+    proxy_busy_buffers_size 256k;
 
     # Static assets caching without sub_filter processing
     location ^~ /assets/ {
@@ -634,7 +654,6 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
 
-        proxy_buffering off;
         expires 7d;
         add_header Cache-Control "public, max-age=604800, immutable";
     }
@@ -651,8 +670,6 @@ server {
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection \$gitea_connection_upgrade;
-
-        proxy_buffering off;
 
         sub_filter_once off;
         sub_filter_types text/html text/javascript application/javascript application/json text/xml text/css;
@@ -674,11 +691,27 @@ server {
         sub_filter "'/assets/" "'\$http_x_ingress_path/assets/";
         sub_filter 'url(/assets/' 'url(\$http_x_ingress_path/assets/';
         sub_filter 'url("/assets/' 'url("\$http_x_ingress_path/assets/';
-        sub_filter "url('/assets/" "url('\$http_x_ingress_path/assets/";
         sub_filter '"/user/' '"\$http_x_ingress_path/user/';
         sub_filter '"/repo/' '"\$http_x_ingress_path/repo/';
         sub_filter '"/api/' '"\$http_x_ingress_path/api/';
         sub_filter '"/avatar/' '"\$http_x_ingress_path/avatar/';
+        sub_filter '"/custom/' '"\$http_x_ingress_path/custom/';
+        sub_filter '"AssetUrlPrefix":"/assets"' '"AssetUrlPrefix":"\$http_x_ingress_path/assets"';
+        sub_filter '"AssetUrlPrefix": "/assets"' '"AssetUrlPrefix": "\$http_x_ingress_path/assets"';
+        sub_filter '"assetUrlPrefix":"/assets"' '"assetUrlPrefix":"\$http_x_ingress_path/assets"';
+        sub_filter '"assetUrlPrefix": "/assets"' '"assetUrlPrefix": "\$http_x_ingress_path/assets"';
+        sub_filter '"AppSubUrl":""' '"AppSubUrl":"\$http_x_ingress_path"';
+        sub_filter '"AppSubUrl": ""' '"AppSubUrl": "\$http_x_ingress_path"';
+        sub_filter '"appSubUrl":""' '"appSubUrl":"\$http_x_ingress_path"';
+        sub_filter '"appSubUrl": ""' '"appSubUrl": "\$http_x_ingress_path"';
+        sub_filter '"StaticUrlPrefix":""' '"StaticUrlPrefix":"\$http_x_ingress_path"';
+        sub_filter '"StaticUrlPrefix": ""' '"StaticUrlPrefix": "\$http_x_ingress_path"';
+        sub_filter '"staticUrlPrefix":""' '"staticUrlPrefix":"\$http_x_ingress_path"';
+        sub_filter '"staticUrlPrefix": ""' '"staticUrlPrefix": "\$http_x_ingress_path"';
+        sub_filter '"CustomUrlPrefix":"/custom"' '"CustomUrlPrefix":"\$http_x_ingress_path/custom"';
+        sub_filter '"CustomUrlPrefix": "/custom"' '"CustomUrlPrefix": "\$http_x_ingress_path/custom"';
+        sub_filter '"customUrlPrefix":"/custom"' '"customUrlPrefix":"\$http_x_ingress_path/custom"';
+        sub_filter '"customUrlPrefix": "/custom"' '"customUrlPrefix": "\$http_x_ingress_path/custom"';
         sub_filter "AppSubUrl: ''" "AppSubUrl: '\$http_x_ingress_path'";
         sub_filter "appSubUrl: ''" "appSubUrl: '\$http_x_ingress_path'";
         sub_filter "StaticUrlPrefix: ''" "StaticUrlPrefix: '\$http_x_ingress_path'";
@@ -705,6 +738,9 @@ server {
     ${DIRECT_LISTEN}
 
     client_max_body_size 512M;
+    proxy_buffer_size 128k;
+    proxy_buffers 4 256k;
+    proxy_busy_buffers_size 256k;
 
     # Static assets caching
     location ^~ /assets/ {
@@ -719,7 +755,6 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$direct_proto;
 
-        proxy_buffering off;
         expires 7d;
         add_header Cache-Control "public, max-age=604800, immutable";
     }
@@ -735,9 +770,6 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$direct_proto;
-
-        proxy_buffering off;
-        proxy_request_buffering off;
     }
 }
 EOF
