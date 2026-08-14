@@ -114,6 +114,8 @@ else
     bashio::log.info "Defaulting ROOT_URL: ${ROOT_URL}"
 fi
 
+RP_ORIGIN="${ROOT_URL%/}"
+
 # Determine SSH server mode
 if bashio::config.equals 'ssh_server' 'openssh'; then
     START_SSH_SERVER="false"
@@ -398,7 +400,7 @@ SSH_ROOT_PATH = /data/git/.ssh
 LFS_START_SERVER = true
 LFS_JWT_SECRET_URI = file:/data/gitea/conf/lfs_jwt_secret
 OFFLINE_MODE = false
-ENABLE_GZIP = true
+ENABLE_GZIP = false
 
 [database]
 DB_TYPE = sqlite3
@@ -415,7 +417,7 @@ PASSWORD_CHECK_PWN = ${PASSWORD_CHECK_PWN}
 REVERSE_PROXY_TRUSTED_PROXIES = *
 REVERSE_PROXY_LIMIT = 2
 RP_ID = ${DOMAIN}
-RP_ORIGIN = ${ROOT_URL}
+RP_ORIGIN = ${RP_ORIGIN}
 
 [service]
 DISABLE_REGISTRATION = false
@@ -463,6 +465,7 @@ PROVIDER = memory
 [log]
 MODE = console
 LEVEL = Info
+ENABLE_ROUTER_LOG = true
 
 [lfs]
 PATH = /data/gitea/data/lfs
@@ -490,7 +493,7 @@ else
     ini_set_default "server" "LFS_START_SERVER" "true"
     ini_set "server" "LFS_JWT_SECRET_URI" "file:/data/gitea/conf/lfs_jwt_secret"
     ini_set_default "server" "OFFLINE_MODE" "false"
-    ini_set_default "server" "ENABLE_GZIP" "true"
+    ini_set "server" "ENABLE_GZIP" "false"
 
     ini_set_default "database" "DB_TYPE" "sqlite3"
     ini_set_default "database" "PATH" "/data/gitea/data/gitea.db"
@@ -505,7 +508,7 @@ else
     ini_set "security" "REVERSE_PROXY_TRUSTED_PROXIES" "*"
     ini_set "security" "REVERSE_PROXY_LIMIT" "2"
     ini_set "security" "RP_ID" "${DOMAIN}"
-    ini_set "security" "RP_ORIGIN" "${ROOT_URL}"
+    ini_set "security" "RP_ORIGIN" "${RP_ORIGIN}"
 
     ini_set_default "service" "DISABLE_REGISTRATION" "false"
     ini_set_default "service" "REQUIRE_SIGNIN_VIEW" "false"
@@ -547,6 +550,7 @@ else
 
     ini_set_default "log" "MODE" "console"
     ini_set_default "log" "LEVEL" "Info"
+    ini_set "log" "ENABLE_ROUTER_LOG" "true"
 
     ini_set_default "lfs" "PATH" "/data/gitea/data/lfs"
 fi
@@ -647,7 +651,8 @@ server {
         proxy_set_header Connection \$gitea_connection_upgrade;
 
         sub_filter_once off;
-        sub_filter_types text/html text/javascript application/javascript application/json text/xml text/css;
+        sub_filter_types *;
+        sub_filter_last_modified on;
         sub_filter 'http://\$http_host/' '\$http_x_ingress_path/';
         sub_filter 'https://\$http_host/' '\$http_x_ingress_path/';
         sub_filter 'http://\$host:8099/' '\$http_x_ingress_path/';
@@ -716,26 +721,10 @@ server {
     proxy_buffer_size 128k;
     proxy_buffers 4 256k;
     proxy_busy_buffers_size 256k;
-
-    # Static assets caching
-    location ^~ /assets/ {
-        proxy_pass http://gitea_backend;
-        proxy_http_version 1.1;
-
-        proxy_set_header Connection \$gitea_connection_upgrade;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Host \$direct_host;
-        proxy_set_header X-Forwarded-Host \$direct_host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$direct_proto;
-
-        expires 7d;
-        add_header Cache-Control "public, max-age=604800, immutable";
-    }
+    proxy_temp_file_write_size 256k;
 
     location / {
-        proxy_pass http://gitea_backend;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
 
         proxy_set_header Connection \$gitea_connection_upgrade;
@@ -745,6 +734,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$direct_proto;
+
+        proxy_connect_timeout 90;
+        proxy_send_timeout 300;
+        proxy_read_timeout 300;
     }
 }
 EOF
