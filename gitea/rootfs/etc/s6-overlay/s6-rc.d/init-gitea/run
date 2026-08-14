@@ -648,14 +648,17 @@ server {
 
     client_max_body_size 512M;
     proxy_buffer_size 128k;
-    proxy_buffers 4 256k;
-    proxy_busy_buffers_size 256k;
+    proxy_buffers 16 256k;
+    proxy_busy_buffers_size 512k;
+    proxy_temp_file_write_size 512k;
 
     location / {
         proxy_pass http://gitea_backend;
         proxy_http_version 1.1;
 
         proxy_set_header Accept-Encoding "";
+        proxy_set_header If-None-Match "";
+        proxy_set_header If-Modified-Since "";
         proxy_set_header Host \$host;
         proxy_set_header X-Forwarded-Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -664,12 +667,20 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection \$gitea_connection_upgrade;
 
+        proxy_hide_header ETag;
+        proxy_hide_header Last-Modified;
+        proxy_ignore_headers Cache-Control Expires;
+
         add_header Cache-Control "no-cache, no-store, must-revalidate" always;
         add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
 
         sub_filter_once off;
         sub_filter_types *;
         sub_filter_last_modified on;
+
+        # Runtime Ingress bootstrap interceptor injected in HTML head
+        sub_filter '<head>' '<head><script>(function(){var p="\$http_x_ingress_path";if(!p)return;if(window.config){window.config.appSubUrl=p;window.config.assetUrlPrefix=p+"/assets";window.config.staticUrlPrefix=p;window.config.customUrlPrefix=p+"/custom";}function rw(u){if(typeof u!=="string"||u.indexOf(p)===0)return u;if(u.indexOf("/assets/")===0||u.indexOf("/-/")===0||u.indexOf("/api/")===0||u.indexOf("/user/")===0||u.indexOf("/repo/")===0||u.indexOf("/org/")===0||u.indexOf("/admin/")===0||u.indexOf("/notifications")===0||u.indexOf("/explore/")===0){return p+u;}var o=window.location.origin;if(u.indexOf(o+"/assets/")===0||u.indexOf(o+"/-/")===0||u.indexOf(o+"/api/")===0){return u.replace(o,o+p);}return u;}var oc=document.createElement;document.createElement=function(t,o){var e=oc.call(document,t,o);var s=String(t).toLowerCase();if(s==="script"||s==="link"){var sa=e.setAttribute;e.setAttribute=function(n,v){if((n==="src"||n==="href")&&typeof v==="string"){v=rw(v);}return sa.call(this,n,v);};var k=s==="script"?"src":"href";var val="";Object.defineProperty(e,k,{get:function(){return e.getAttribute(k)||val;},set:function(v){v=rw(v);val=v;e.setAttribute(k,v);},configurable:true,enumerable:true});}return e;};if(window.fetch){var of=window.fetch;window.fetch=function(i,n){if(typeof i==="string"){i=rw(i);}else if(i&&i.url){i=new Request(rw(i.url),i);}return of.call(this,i,n);};}if(window.XMLHttpRequest){var oo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){if(typeof u==="string"){u=rw(u);}var a=[m,u];for(var i=2;i<arguments.length;i++){a.push(arguments[i]);}return oo.apply(this,a);};}})();</script>';
         sub_filter 'http://\$http_host/' '\$http_x_ingress_path/';
         sub_filter 'https://\$http_host/' '\$http_x_ingress_path/';
         sub_filter 'http://\$host:8099/' '\$http_x_ingress_path/';
