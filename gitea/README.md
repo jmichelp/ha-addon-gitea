@@ -7,7 +7,6 @@ Gitea add-on for Home Assistant to self-host code repositories.
 
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]
-[![Github Actions][github-actions-shield]][github-actions]
 ![Project Maintenance][maintenance-shield]
 [![GitHub Activity][commits-shield]][commits]
 
@@ -28,8 +27,6 @@ This add-on allows you to run a lightweight, self-hosted Gitea Git service direc
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [commits-shield]: https://img.shields.io/github/commit-activity/y/jmichelp/ha-addon-gitea.svg
 [commits]: https://github.com/jmichelp/ha-addon-gitea/commits/main
-[github-actions-shield]: https://github.com/jmichelp/ha-addon-gitea/workflows/CI/badge.svg
-[github-actions]: https://github.com/jmichelp/ha-addon-gitea/actions
 [maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg
 [project-stage-shield]: https://img.shields.io/badge/project%20stage-experimental-yellow.svg
 [releases-shield]: https://img.shields.io/github/release/jmichelp/ha-addon-gitea.svg
