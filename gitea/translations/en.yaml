@@ -17,6 +17,81 @@ configuration:
   use_nginx:
     name: Use Nginx reverse proxy
     description: Generate Nginx reverse proxy configuration in /share/nginx_proxy/ for the NGINX Home Assistant SSL Proxy add-on.
+  ssh_server:
+    name: SSH Server Type
+    description: Select between Gitea's embedded SSH server (builtin) or OpenSSH daemon (openssh).
+  password_check_pwn:
+    name: Check Exposed Passwords (HaveIBeenPwned)
+    description: Check passwords against HaveIBeenPwned to prevent users from using leaked passwords.
+  mailer_enabled:
+    name: Enable Email Notifications
+    description: Enable the mailer service for email notifications and user account registration confirmations.
+  mailer_protocol:
+    name: Mailer Protocol
+    description: SMTP protocol to use (starttls, smtps, smtp, sendmail, dummy).
+  mailer_smtp_addr:
+    name: SMTP Server Address
+    description: Hostname or IP of the SMTP mail server (e.g. `smtp.gmail.com`).
+  mailer_smtp_port:
+    name: SMTP Port
+    description: Port of the SMTP mail server (e.g. `587` for StartTLS, `465` for SMTPS, `25` for plain SMTP).
+  mailer_user:
+    name: SMTP Username
+    description: Username used to authenticate with the SMTP server.
+  mailer_password:
+    name: SMTP Password
+    description: Password or application password for the SMTP user.
+  mailer_from:
+    name: Sender Email Address
+    description: The From email address (e.g. `gitea@example.com` or `"Gitea" <gitea@example.com>`).
+  mailer_helo_hostname:
+    name: SMTP HELO Hostname
+    description: Optional custom HELO hostname sent to the SMTP server.
+  mailer_force_trust_cert:
+    name: Force Trust SMTP Certificate
+    description: Bypass TLS certificate validation for the SMTP server (useful for self-signed certificates).
+  register_email_confirm:
+    name: Require Email Confirmation on Registration
+    description: Require newly registered users to confirm their email address before logging in (requires mailer).
+  captcha_enabled:
+    name: Enable CAPTCHA
+    description: Enable CAPTCHA validation for user registration.
+  captcha_type:
+    name: CAPTCHA Type
+    description: Type of CAPTCHA to use (image, recaptcha, hcaptcha, mcaptcha, cfturnstile).
+  captcha_for_login:
+    name: Require CAPTCHA for Login
+    description: Require CAPTCHA validation on login as well as registration.
+  recaptcha_sitekey:
+    name: reCAPTCHA Site Key
+    description: Google reCAPTCHA v2 site key.
+  recaptcha_secret:
+    name: reCAPTCHA Secret Key
+    description: Google reCAPTCHA v2 secret key.
+  recaptcha_url:
+    name: reCAPTCHA URL
+    description: URL endpoint for reCAPTCHA validation (default `https://www.google.com/recaptcha/`).
+  hcaptcha_sitekey:
+    name: hCaptcha Site Key
+    description: hCaptcha site key.
+  hcaptcha_secret:
+    name: hCaptcha Secret Key
+    description: hCaptcha secret key.
+  mcaptcha_sitekey:
+    name: mCaptcha Site Key
+    description: mCaptcha site key.
+  mcaptcha_secret:
+    name: mCaptcha Secret Key
+    description: mCaptcha secret key.
+  mcaptcha_url:
+    name: mCaptcha URL
+    description: URL endpoint for your mCaptcha instance (e.g. `https://demo.mcaptcha.org/`).
+  cf_turnstile_sitekey:
+    name: Cloudflare Turnstile Site Key
+    description: Cloudflare Turnstile site key.
+  cf_turnstile_secret:
+    name: Cloudflare Turnstile Secret Key
+    description: Cloudflare Turnstile secret key.
 network:
   2222/tcp: Git SSH interface port
   3000/tcp: Gitea Web UI interface port

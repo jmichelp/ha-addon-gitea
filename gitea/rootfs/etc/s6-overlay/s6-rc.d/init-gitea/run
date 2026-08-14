@@ -13,11 +13,15 @@ bashio::log.info "Initializing Gitea environment..."
 mkdir -p \
     /data/gitea/conf \
     /data/gitea/data \
+    /data/gitea/data/lfs \
     /data/gitea/log \
     /data/gitea/ssh \
     /data/git/repositories \
     /data/git/.ssh \
     /run/nginx \
+    /run/sshd \
+    /var/empty \
+    /etc/ssh \
     /var/log/nginx \
     /var/lib/nginx \
     /etc/nginx/http.d
@@ -36,7 +40,47 @@ if [ -L /data/gitea/templates ] && [ ! -e /data/gitea/templates ]; then
 fi
 
 # Ensure directory permissions are 755
-chmod 755 /data/gitea /data/gitea/conf /data/gitea/data /data/gitea/log /data/gitea/ssh /data/git /data/git/repositories /data/git/.ssh 2>/dev/null || true
+chmod 755 /data/gitea /data/gitea/conf /data/gitea/data /data/gitea/log /data/gitea/ssh /data/git /data/git/repositories /data/git/.ssh /run/sshd /var/empty 2>/dev/null || true
+
+# Generate SSH Host Keys in /data/gitea/ssh/ for OpenSSH server persistence
+if [ ! -f /data/gitea/ssh/ssh_host_ed25519_key ]; then
+    bashio::log.info "Generating SSH ed25519 host key..."
+    ssh-keygen -t ed25519 -N "" -f /data/gitea/ssh/ssh_host_ed25519_key >/dev/null 2>&1 || true
+fi
+if [ ! -f /data/gitea/ssh/ssh_host_rsa_key ]; then
+    bashio::log.info "Generating SSH RSA host key..."
+    ssh-keygen -t rsa -b 4096 -N "" -f /data/gitea/ssh/ssh_host_rsa_key >/dev/null 2>&1 || true
+fi
+if [ ! -f /data/gitea/ssh/ssh_host_ecdsa_key ]; then
+    bashio::log.info "Generating SSH ECDSA host key..."
+    ssh-keygen -t ecdsa -b 521 -N "" -f /data/gitea/ssh/ssh_host_ecdsa_key >/dev/null 2>&1 || true
+fi
+chmod 600 /data/gitea/ssh/ssh_host_*_key 2>/dev/null || true
+chmod 644 /data/gitea/ssh/ssh_host_*.pub 2>/dev/null || true
+
+# Generate /etc/ssh/sshd_config for OpenSSH mode
+cat <<'EOF' > /etc/ssh/sshd_config
+Port 2222
+ListenAddress 0.0.0.0
+HostKey /data/gitea/ssh/ssh_host_ed25519_key
+HostKey /data/gitea/ssh/ssh_host_rsa_key
+HostKey /data/gitea/ssh/ssh_host_ecdsa_key
+AuthorizedKeysFile /data/git/.ssh/authorized_keys
+AllowUsers git
+PasswordAuthentication no
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+KbdInteractiveAuthentication no
+UsePAM no
+PrintMotd no
+AcceptEnv GIT_PROTOCOL
+Subsystem sftp /usr/lib/ssh/sftp-server
+EOF
+
+# Ensure git user authorized_keys file exists
+touch /data/git/.ssh/authorized_keys
+chmod 600 /data/git/.ssh/authorized_keys
+chmod 700 /data/git/.ssh
 
 # Calculate configuration parameters
 bashio::config.require 'domain'
@@ -67,7 +111,226 @@ else
     bashio::log.info "Defaulting ROOT_URL: ${ROOT_URL}"
 fi
 
-# Setup default app.ini if not existing or empty
+# Determine SSH server mode
+if bashio::config.equals 'ssh_server' 'openssh'; then
+    START_SSH_SERVER="false"
+    bashio::log.info "SSH Server mode: OpenSSH daemon"
+else
+    START_SSH_SERVER="true"
+    bashio::log.info "SSH Server mode: Gitea embedded SSH server"
+fi
+
+# Password policy
+PASSWORD_CHECK_PWN="false"
+if bashio::config.true 'password_check_pwn'; then
+    PASSWORD_CHECK_PWN="true"
+fi
+
+# Mailer configuration
+MAILER_ENABLED="false"
+MAILER_PROTOCOL="starttls"
+MAILER_SMTP_ADDR=""
+MAILER_SMTP_PORT="587"
+MAILER_USER=""
+MAILER_PASSWORD=""
+MAILER_FROM=""
+MAILER_HELO_HOSTNAME=""
+MAILER_FORCE_TRUST_CERT="false"
+REGISTER_EMAIL_CONFIRM="false"
+
+if bashio::config.true 'mailer_enabled'; then
+    MAILER_ENABLED="true"
+    if bashio::config.has_value 'mailer_protocol'; then
+        MAILER_PROTOCOL=$(bashio::config 'mailer_protocol')
+    fi
+    if bashio::config.has_value 'mailer_smtp_addr'; then
+        MAILER_SMTP_ADDR=$(bashio::config 'mailer_smtp_addr')
+    fi
+    if bashio::config.has_value 'mailer_smtp_port'; then
+        MAILER_SMTP_PORT=$(bashio::config 'mailer_smtp_port')
+    fi
+    if bashio::config.has_value 'mailer_user'; then
+        MAILER_USER=$(bashio::config 'mailer_user')
+    fi
+    if bashio::config.has_value 'mailer_password'; then
+        MAILER_PASSWORD=$(bashio::config 'mailer_password')
+    fi
+    if bashio::config.has_value 'mailer_from'; then
+        MAILER_FROM=$(bashio::config 'mailer_from')
+    fi
+    if bashio::config.has_value 'mailer_helo_hostname'; then
+        MAILER_HELO_HOSTNAME=$(bashio::config 'mailer_helo_hostname')
+    fi
+    if bashio::config.true 'mailer_force_trust_cert'; then
+        MAILER_FORCE_TRUST_CERT="true"
+    fi
+    if bashio::config.true 'register_email_confirm'; then
+        REGISTER_EMAIL_CONFIRM="true"
+    fi
+fi
+
+# CAPTCHA configuration
+CAPTCHA_ENABLED="false"
+CAPTCHA_TYPE="image"
+CAPTCHA_FOR_LOGIN="false"
+RECAPTCHA_SITEKEY=""
+RECAPTCHA_SECRET=""
+RECAPTCHA_URL="https://www.google.com/recaptcha/"
+HCAPTCHA_SITEKEY=""
+HCAPTCHA_SECRET=""
+MCAPTCHA_SITEKEY=""
+MCAPTCHA_SECRET=""
+MCAPTCHA_URL="https://demo.mcaptcha.org/"
+CF_TURNSTILE_SITEKEY=""
+CF_TURNSTILE_SECRET=""
+
+if bashio::config.true 'captcha_enabled'; then
+    CAPTCHA_ENABLED="true"
+    if bashio::config.has_value 'captcha_type'; then
+        CAPTCHA_TYPE=$(bashio::config 'captcha_type')
+    fi
+    if bashio::config.true 'captcha_for_login'; then
+        CAPTCHA_FOR_LOGIN="true"
+    fi
+    if bashio::config.has_value 'recaptcha_sitekey'; then
+        RECAPTCHA_SITEKEY=$(bashio::config 'recaptcha_sitekey')
+    fi
+    if bashio::config.has_value 'recaptcha_secret'; then
+        RECAPTCHA_SECRET=$(bashio::config 'recaptcha_secret')
+    fi
+    if bashio::config.has_value 'recaptcha_url'; then
+        RECAPTCHA_URL=$(bashio::config 'recaptcha_url')
+    fi
+    if bashio::config.has_value 'hcaptcha_sitekey'; then
+        HCAPTCHA_SITEKEY=$(bashio::config 'hcaptcha_sitekey')
+    fi
+    if bashio::config.has_value 'hcaptcha_secret'; then
+        HCAPTCHA_SECRET=$(bashio::config 'hcaptcha_secret')
+    fi
+    if bashio::config.has_value 'mcaptcha_sitekey'; then
+        MCAPTCHA_SITEKEY=$(bashio::config 'mcaptcha_sitekey')
+    fi
+    if bashio::config.has_value 'mcaptcha_secret'; then
+        MCAPTCHA_SECRET=$(bashio::config 'mcaptcha_secret')
+    fi
+    if bashio::config.has_value 'mcaptcha_url'; then
+        MCAPTCHA_URL=$(bashio::config 'mcaptcha_url')
+    fi
+    if bashio::config.has_value 'cf_turnstile_sitekey'; then
+        CF_TURNSTILE_SITEKEY=$(bashio::config 'cf_turnstile_sitekey')
+    fi
+    if bashio::config.has_value 'cf_turnstile_secret'; then
+        CF_TURNSTILE_SECRET=$(bashio::config 'cf_turnstile_secret')
+    fi
+fi
+
+# Generate unique secret files in /data/gitea/conf/ (for HA backup retention)
+if [ ! -f /data/gitea/conf/secret_key ]; then
+    bashio::log.info "Generating secret key file (/data/gitea/conf/secret_key)..."
+    if [ -f /data/gitea/conf/app.ini ] && grep -q "^SECRET_KEY =" /data/gitea/conf/app.ini; then
+        existing_key=$(grep "^SECRET_KEY =" /data/gitea/conf/app.ini | cut -d= -f2- | tr -d ' \r\n')
+        if [ -n "${existing_key}" ]; then
+            printf "%s" "${existing_key}" > /data/gitea/conf/secret_key
+        fi
+    fi
+    if [ ! -s /data/gitea/conf/secret_key ]; then
+        /usr/bin/gitea generate secret SECRET_KEY > /data/gitea/conf/secret_key 2>/dev/null || tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 64 > /data/gitea/conf/secret_key
+    fi
+fi
+chmod 600 /data/gitea/conf/secret_key 2>/dev/null || true
+chown git:git /data/gitea/conf/secret_key 2>/dev/null || true
+
+if [ ! -f /data/gitea/conf/internal_token ]; then
+    bashio::log.info "Generating internal token file (/data/gitea/conf/internal_token)..."
+    if [ -f /data/gitea/conf/app.ini ] && grep -q "^INTERNAL_TOKEN =" /data/gitea/conf/app.ini; then
+        existing_token=$(grep "^INTERNAL_TOKEN =" /data/gitea/conf/app.ini | cut -d= -f2- | tr -d ' \r\n')
+        if [ -n "${existing_token}" ]; then
+            printf "%s" "${existing_token}" > /data/gitea/conf/internal_token
+        fi
+    fi
+    if [ ! -s /data/gitea/conf/internal_token ]; then
+        /usr/bin/gitea generate secret INTERNAL_TOKEN > /data/gitea/conf/internal_token 2>/dev/null || tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 64 > /data/gitea/conf/internal_token
+    fi
+fi
+chmod 600 /data/gitea/conf/internal_token 2>/dev/null || true
+chown git:git /data/gitea/conf/internal_token 2>/dev/null || true
+
+if [ ! -s /data/gitea/conf/jwt_secret ]; then
+    bashio::log.info "Generating JWT secret file (/data/gitea/conf/jwt_secret)..."
+    /usr/bin/gitea generate secret JWT_SECRET > /data/gitea/conf/jwt_secret 2>/dev/null || tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 64 > /data/gitea/conf/jwt_secret
+fi
+chmod 600 /data/gitea/conf/jwt_secret 2>/dev/null || true
+chown git:git /data/gitea/conf/jwt_secret 2>/dev/null || true
+
+if [ ! -s /data/gitea/conf/lfs_jwt_secret ]; then
+    bashio::log.info "Generating LFS JWT secret file (/data/gitea/conf/lfs_jwt_secret)..."
+    /usr/bin/gitea generate secret JWT_SECRET > /data/gitea/conf/lfs_jwt_secret 2>/dev/null || tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 64 > /data/gitea/conf/lfs_jwt_secret
+fi
+chmod 600 /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true
+chown git:git /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true
+
+# Helper function to set or replace key in ini file
+ini_set() {
+    local section="$1"
+    local key="$2"
+    local value="$3"
+    local file="/data/gitea/conf/app.ini"
+
+    if ! grep -q "^\[${section}\]" "${file}"; then
+        printf "\n[%s]\n%s = %s\n" "${section}" "${key}" "${value}" >> "${file}"
+        return
+    fi
+
+    local section_line
+    section_line=$(grep -n "^\[${section}\]" "${file}" | head -n 1 | cut -d: -f1)
+    local next_section_line
+    next_section_line=$(tail -n +"$((section_line + 1))" "${file}" | grep -n "^\[" | head -n 1 | cut -d: -f1)
+
+    if [ -n "${next_section_line}" ]; then
+        local end_line=$((section_line + next_section_line - 1))
+        if sed -n "${section_line},${end_line}p" "${file}" | grep -q "^${key}[[:space:]]*="; then
+            sed -i "${section_line},${end_line}{s|^${key}[[:space:]]*=.*|${key} = ${value}|;}" "${file}"
+        else
+            sed -i "${section_line}a ${key} = ${value}" "${file}"
+        fi
+    else
+        if tail -n +"${section_line}" "${file}" | grep -q "^${key}[[:space:]]*="; then
+            sed -i "${section_line},\${s|^${key}[[:space:]]*=.*|${key} = ${value}|;}" "${file}"
+        else
+            sed -i "${section_line}a ${key} = ${value}" "${file}"
+        fi
+    fi
+}
+
+ini_set_default() {
+    local section="$1"
+    local key="$2"
+    local value="$3"
+    local file="/data/gitea/conf/app.ini"
+
+    if ! grep -q "^\[${section}\]" "${file}"; then
+        printf "\n[%s]\n%s = %s\n" "${section}" "${key}" "${value}" >> "${file}"
+        return
+    fi
+
+    local section_line
+    section_line=$(grep -n "^\[${section}\]" "${file}" | head -n 1 | cut -d: -f1)
+    local next_section_line
+    next_section_line=$(tail -n +"$((section_line + 1))" "${file}" | grep -n "^\[" | head -n 1 | cut -d: -f1)
+
+    if [ -n "${next_section_line}" ]; then
+        local end_line=$((section_line + next_section_line - 1))
+        if ! sed -n "${section_line},${end_line}p" "${file}" | grep -q "^${key}[[:space:]]*="; then
+            sed -i "${section_line}a ${key} = ${value}" "${file}"
+        fi
+    else
+        if ! tail -n +"${section_line}" "${file}" | grep -q "^${key}[[:space:]]*="; then
+            sed -i "${section_line}a ${key} = ${value}" "${file}"
+        fi
+    fi
+}
+
+# Setup or upgrade app.ini
 if [ ! -s /data/gitea/conf/app.ini ]; then
     bashio::log.info "Creating initial Gitea configuration (app.ini)..."
     cat <<EOF > /data/gitea/conf/app.ini
@@ -88,12 +351,13 @@ HTTP_ADDR = 127.0.0.1
 HTTP_PORT = 3001
 ROOT_URL = ${ROOT_URL}
 DISABLE_SSH = false
-START_SSH_SERVER = true
+START_SSH_SERVER = ${START_SSH_SERVER}
 SSH_PORT = ${SSH_PORT}
 SSH_LISTEN_PORT = 2222
 SSH_KEYGEN_PATH = /usr/bin/ssh-keygen
 SSH_ROOT_PATH = /data/gitea/ssh
 LFS_START_SERVER = true
+LFS_JWT_SECRET_URI = file:/data/gitea/conf/lfs_jwt_secret
 OFFLINE_MODE = false
 ENABLE_GZIP = true
 
@@ -105,16 +369,50 @@ SQLITE_TIMEOUT = 20000
 
 [security]
 INSTALL_LOCK = true
-SECRET_KEY = 
-INTERNAL_TOKEN = 
+SECRET_KEY_URI = file:/data/gitea/conf/secret_key
+INTERNAL_TOKEN_URI = file:/data/gitea/conf/internal_token
+PASSWORD_HASH_ALGO = argon2
+PASSWORD_CHECK_PWN = ${PASSWORD_CHECK_PWN}
+REVERSE_PROXY_TRUSTED_PROXIES = *
+REVERSE_PROXY_LIMIT = 2
+RP_ID = ${DOMAIN}
+RP_ORIGIN = ${ROOT_URL}
 
 [service]
 DISABLE_REGISTRATION = false
 REQUIRE_SIGNIN_VIEW = false
-REGISTER_EMAIL_CONFIRM = false
-ENABLE_NOTIFY_MAIL = false
+REGISTER_EMAIL_CONFIRM = ${REGISTER_EMAIL_CONFIRM}
+ENABLE_NOTIFY_MAIL = ${MAILER_ENABLED}
 DISABLE_GRAVATAR = false
 ENABLE_FEDERATED_AVATAR = false
+ENABLE_CAPTCHA = ${CAPTCHA_ENABLED}
+REQUIRE_CAPTCHA_FOR_LOGIN = ${CAPTCHA_FOR_LOGIN}
+CAPTCHA_TYPE = ${CAPTCHA_TYPE}
+RECAPTCHA_SECRET = ${RECAPTCHA_SECRET}
+RECAPTCHA_SITEKEY = ${RECAPTCHA_SITEKEY}
+RECAPTCHA_URL = ${RECAPTCHA_URL}
+HCAPTCHA_SECRET = ${HCAPTCHA_SECRET}
+HCAPTCHA_SITEKEY = ${HCAPTCHA_SITEKEY}
+MCAPTCHA_SECRET = ${MCAPTCHA_SECRET}
+MCAPTCHA_SITEKEY = ${MCAPTCHA_SITEKEY}
+MCAPTCHA_URL = ${MCAPTCHA_URL}
+CF_TURNSTILE_SECRET = ${CF_TURNSTILE_SECRET}
+CF_TURNSTILE_SITEKEY = ${CF_TURNSTILE_SITEKEY}
+
+[mailer]
+ENABLED = ${MAILER_ENABLED}
+PROTOCOL = ${MAILER_PROTOCOL}
+SMTP_ADDR = ${MAILER_SMTP_ADDR}
+SMTP_PORT = ${MAILER_SMTP_PORT}
+USER = ${MAILER_USER}
+PASSWD = ${MAILER_PASSWORD}
+FROM = ${MAILER_FROM}
+ENABLE_HELO = true
+HELO_HOSTNAME = ${MAILER_HELO_HOSTNAME}
+FORCE_TRUST_SERVER_CERT = ${MAILER_FORCE_TRUST_CERT}
+
+[oauth2]
+JWT_SECRET_URI = file:/data/gitea/conf/jwt_secret
 
 [cache]
 ADAPTER = memory
@@ -131,51 +429,87 @@ LEVEL = Info
 PATH = /data/gitea/data/lfs
 EOF
 else
-    # Update existing app.ini with current domain, ports, ROOT_URL, and optimizations
-    sed -i '/STATIC_ROOT_PATH/d' /data/gitea/conf/app.ini
-    sed -i "s|^HTTP_PORT = .*|HTTP_PORT = 3001|" /data/gitea/conf/app.ini
-    sed -i "s|^HTTP_ADDR = .*|HTTP_ADDR = 127.0.0.1|" /data/gitea/conf/app.ini
-    sed -i "s|^ROOT_URL = .*|ROOT_URL = ${ROOT_URL}|" /data/gitea/conf/app.ini
-    sed -i "s|^DOMAIN = .*|DOMAIN = ${DOMAIN}|" /data/gitea/conf/app.ini
-    sed -i "s|^SSH_DOMAIN = .*|SSH_DOMAIN = ${DOMAIN}|" /data/gitea/conf/app.ini
-    sed -i "s|^SSH_PORT = .*|SSH_PORT = ${SSH_PORT}|" /data/gitea/conf/app.ini
-    sed -i "s|^SSH_LISTEN_PORT = .*|SSH_LISTEN_PORT = 2222|" /data/gitea/conf/app.ini
+    bashio::log.info "Upgrading and synchronizing Gitea configuration (app.ini)..."
+    # Remove obsolete keys and cleanup legacy symlink paths
+    sed -i '/STATIC_ROOT_PATH/d; /^SECRET_KEY =/d; /^INTERNAL_TOKEN =/d' /data/gitea/conf/app.ini
 
-    if ! grep -q "^HTTP_ADDR" /data/gitea/conf/app.ini; then
-        sed -i '/\[server\]/a HTTP_ADDR = 127.0.0.1' /data/gitea/conf/app.ini
-    fi
-    if ! grep -q "^ROOT_URL" /data/gitea/conf/app.ini; then
-        sed -i "/\[server\]/a ROOT_URL = ${ROOT_URL}" /data/gitea/conf/app.ini
-    fi
-    if ! grep -q "ENABLE_GZIP" /data/gitea/conf/app.ini; then
-        sed -i '/\[server\]/a ENABLE_GZIP = true' /data/gitea/conf/app.ini
-    fi
-    if ! grep -q "SQLITE_JOURNAL_MODE" /data/gitea/conf/app.ini; then
-        sed -i '/\[database\]/a SQLITE_JOURNAL_MODE = WAL' /data/gitea/conf/app.ini
-    fi
-    if grep -q "ENABLE_FEDERATED_AVATAR" /data/gitea/conf/app.ini; then
-        sed -i 's/^ENABLE_FEDERATED_AVATAR = .*/ENABLE_FEDERATED_AVATAR = false/' /data/gitea/conf/app.ini
-    else
-        sed -i '/\[service\]/a ENABLE_FEDERATED_AVATAR = false' /data/gitea/conf/app.ini
-    fi
-    if grep -q "DISABLE_GRAVATAR" /data/gitea/conf/app.ini; then
-        sed -i 's/^DISABLE_GRAVATAR = .*/DISABLE_GRAVATAR = false/' /data/gitea/conf/app.ini
-    fi
-    if ! grep -q "^\[cache\]" /data/gitea/conf/app.ini; then
-        cat <<'EOF' >> /data/gitea/conf/app.ini
+    # Synchronize template baseline defaults
+    ini_set_default "repository" "ROOT" "/data/git/repositories"
+    ini_set_default "repository" "DEFAULT_BRANCH" "main"
 
-[cache]
-ADAPTER = memory
-INTERVAL = 60
-EOF
-    fi
-    if ! grep -q "^\[session\]" /data/gitea/conf/app.ini; then
-        cat <<'EOF' >> /data/gitea/conf/app.ini
+    ini_set "server" "HTTP_ADDR" "127.0.0.1"
+    ini_set "server" "HTTP_PORT" "3001"
+    ini_set "server" "ROOT_URL" "${ROOT_URL}"
+    ini_set "server" "DOMAIN" "${DOMAIN}"
+    ini_set "server" "SSH_DOMAIN" "${DOMAIN}"
+    ini_set "server" "SSH_PORT" "${SSH_PORT}"
+    ini_set "server" "SSH_LISTEN_PORT" "2222"
+    ini_set "server" "START_SSH_SERVER" "${START_SSH_SERVER}"
+    ini_set_default "server" "DISABLE_SSH" "false"
+    ini_set_default "server" "SSH_KEYGEN_PATH" "/usr/bin/ssh-keygen"
+    ini_set_default "server" "SSH_ROOT_PATH" "/data/gitea/ssh"
+    ini_set_default "server" "LFS_START_SERVER" "true"
+    ini_set "server" "LFS_JWT_SECRET_URI" "file:/data/gitea/conf/lfs_jwt_secret"
+    ini_set_default "server" "OFFLINE_MODE" "false"
+    ini_set_default "server" "ENABLE_GZIP" "true"
 
-[session]
-PROVIDER = memory
-EOF
-    fi
+    ini_set_default "database" "DB_TYPE" "sqlite3"
+    ini_set_default "database" "PATH" "/data/gitea/data/gitea.db"
+    ini_set "database" "SQLITE_JOURNAL_MODE" "WAL"
+    ini_set "database" "SQLITE_TIMEOUT" "20000"
+
+    ini_set_default "security" "INSTALL_LOCK" "true"
+    ini_set "security" "SECRET_KEY_URI" "file:/data/gitea/conf/secret_key"
+    ini_set "security" "INTERNAL_TOKEN_URI" "file:/data/gitea/conf/internal_token"
+    ini_set "security" "PASSWORD_HASH_ALGO" "argon2"
+    ini_set "security" "PASSWORD_CHECK_PWN" "${PASSWORD_CHECK_PWN}"
+    ini_set "security" "REVERSE_PROXY_TRUSTED_PROXIES" "*"
+    ini_set "security" "REVERSE_PROXY_LIMIT" "2"
+    ini_set "security" "RP_ID" "${DOMAIN}"
+    ini_set "security" "RP_ORIGIN" "${ROOT_URL}"
+
+    ini_set_default "service" "DISABLE_REGISTRATION" "false"
+    ini_set_default "service" "REQUIRE_SIGNIN_VIEW" "false"
+    ini_set "service" "REGISTER_EMAIL_CONFIRM" "${REGISTER_EMAIL_CONFIRM}"
+    ini_set "service" "ENABLE_NOTIFY_MAIL" "${MAILER_ENABLED}"
+    ini_set "service" "DISABLE_GRAVATAR" "false"
+    ini_set "service" "ENABLE_FEDERATED_AVATAR" "false"
+    ini_set "service" "ENABLE_CAPTCHA" "${CAPTCHA_ENABLED}"
+    ini_set "service" "REQUIRE_CAPTCHA_FOR_LOGIN" "${CAPTCHA_FOR_LOGIN}"
+    ini_set "service" "CAPTCHA_TYPE" "${CAPTCHA_TYPE}"
+    ini_set "service" "RECAPTCHA_SECRET" "${RECAPTCHA_SECRET}"
+    ini_set "service" "RECAPTCHA_SITEKEY" "${RECAPTCHA_SITEKEY}"
+    ini_set "service" "RECAPTCHA_URL" "${RECAPTCHA_URL}"
+    ini_set "service" "HCAPTCHA_SECRET" "${HCAPTCHA_SECRET}"
+    ini_set "service" "HCAPTCHA_SITEKEY" "${HCAPTCHA_SITEKEY}"
+    ini_set "service" "MCAPTCHA_SECRET" "${MCAPTCHA_SECRET}"
+    ini_set "service" "MCAPTCHA_SITEKEY" "${MCAPTCHA_SITEKEY}"
+    ini_set "service" "MCAPTCHA_URL" "${MCAPTCHA_URL}"
+    ini_set "service" "CF_TURNSTILE_SECRET" "${CF_TURNSTILE_SECRET}"
+    ini_set "service" "CF_TURNSTILE_SITEKEY" "${CF_TURNSTILE_SITEKEY}"
+
+    ini_set "mailer" "ENABLED" "${MAILER_ENABLED}"
+    ini_set "mailer" "PROTOCOL" "${MAILER_PROTOCOL}"
+    ini_set "mailer" "SMTP_ADDR" "${MAILER_SMTP_ADDR}"
+    ini_set "mailer" "SMTP_PORT" "${MAILER_SMTP_PORT}"
+    ini_set "mailer" "USER" "${MAILER_USER}"
+    ini_set "mailer" "PASSWD" "${MAILER_PASSWORD}"
+    ini_set "mailer" "FROM" "${MAILER_FROM}"
+    ini_set_default "mailer" "ENABLE_HELO" "true"
+    ini_set "mailer" "HELO_HOSTNAME" "${MAILER_HELO_HOSTNAME}"
+    ini_set "mailer" "FORCE_TRUST_SERVER_CERT" "${MAILER_FORCE_TRUST_CERT}"
+
+    ini_set "oauth2" "JWT_SECRET_URI" "file:/data/gitea/conf/jwt_secret"
+
+    ini_set_default "cache" "ADAPTER" "memory"
+    ini_set_default "cache" "INTERVAL" "60"
+
+    ini_set_default "session" "PROVIDER" "memory"
+
+    ini_set_default "log" "MODE" "console"
+    ini_set_default "log" "LEVEL" "Info"
+
+    ini_set_default "lfs" "PATH" "/data/gitea/data/lfs"
 fi
 
 # Ensure SQLite database runs in WAL mode with normal sync for high performance
@@ -185,8 +519,9 @@ fi
 
 # Secure sensitive configuration and SSH keys
 chmod 640 /data/gitea/conf/app.ini 2>/dev/null || true
+chmod 600 /data/gitea/conf/secret_key /data/gitea/conf/internal_token /data/gitea/conf/jwt_secret /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true
 chmod 700 /data/git/.ssh /data/gitea/ssh 2>/dev/null || true
-find /data/git/.ssh /data/gitea/ssh -type f -exec chmod 600 {} + 2>/dev/null || true
+find /data/git/.ssh /data/gitea/ssh -type f -name "*_key" -exec chmod 600 {} + 2>/dev/null || true
 
 # Ensure all Gitea data is owned by git:git
 chown -R git:git /data/gitea /data/git /app/gitea 2>/dev/null || true
@@ -227,17 +562,6 @@ map \$http_upgrade \$gitea_connection_upgrade {
     ''      '';
 }
 
-# Ingress scheme and host mappings
-map \$http_x_forwarded_proto \$ingress_proto {
-    default \$http_x_forwarded_proto;
-    ''      https;
-}
-
-map \$http_x_forwarded_host \$ingress_host {
-    default \$http_x_forwarded_host;
-    ''      \$host;
-}
-
 # Direct access scheme and host mappings
 map \$http_x_forwarded_proto \$direct_proto {
     default \$http_x_forwarded_proto;
@@ -266,11 +590,11 @@ server {
 
         proxy_set_header Connection \$gitea_connection_upgrade;
         proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Host \$ingress_host;
-        proxy_set_header X-Forwarded-Host \$ingress_host;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$ingress_proto;
+        proxy_set_header X-Forwarded-Proto https;
 
         proxy_buffering off;
         expires 7d;
@@ -282,11 +606,11 @@ server {
         proxy_http_version 1.1;
 
         proxy_set_header Accept-Encoding "";
-        proxy_set_header Host \$ingress_host;
-        proxy_set_header X-Forwarded-Host \$ingress_host;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$ingress_proto;
+        proxy_set_header X-Forwarded-Proto https;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection \$gitea_connection_upgrade;
 
@@ -294,11 +618,15 @@ server {
 
         sub_filter_once off;
         sub_filter_types text/html;
-        sub_filter 'http://\$http_host/' '\$ingress_proto://\$ingress_host\$http_x_ingress_path/';
-        sub_filter 'https://\$http_host/' '\$ingress_proto://\$ingress_host\$http_x_ingress_path/';
-        sub_filter 'http://\$host:8099/' '\$ingress_proto://\$ingress_host\$http_x_ingress_path/';
-        sub_filter 'https://\$host:8099/' '\$ingress_proto://\$ingress_host\$http_x_ingress_path/';
-        sub_filter 'http://\$host/' '\$ingress_proto://\$ingress_host\$http_x_ingress_path/';
+        sub_filter 'http://\$http_host/' '\$http_x_ingress_path/';
+        sub_filter 'https://\$http_host/' '\$http_x_ingress_path/';
+        sub_filter 'http://\$host:8099/' '\$http_x_ingress_path/';
+        sub_filter 'https://\$host:8099/' '\$http_x_ingress_path/';
+        sub_filter 'http://\$host/' '\$http_x_ingress_path/';
+        sub_filter 'https://\$host/' '\$http_x_ingress_path/';
+        sub_filter 'http://${DOMAIN}/' '\$http_x_ingress_path/';
+        sub_filter 'https://${DOMAIN}/' '\$http_x_ingress_path/';
+        sub_filter '${ROOT_URL}' '\$http_x_ingress_path/';
         sub_filter 'href="/' 'href="\$http_x_ingress_path/';
         sub_filter 'src="/' 'src="\$http_x_ingress_path/';
         sub_filter 'action="/' 'action="\$http_x_ingress_path/';
@@ -310,10 +638,16 @@ server {
         sub_filter '"/avatar/' '"\$http_x_ingress_path/avatar/';
         sub_filter "appSubUrl: ''" "appSubUrl: '\$http_x_ingress_path'";
 
+        proxy_cookie_path / \$http_x_ingress_path/;
         proxy_redirect http://\$http_host/ \$http_x_ingress_path/;
         proxy_redirect https://\$http_host/ \$http_x_ingress_path/;
         proxy_redirect http://\$host:8099/ \$http_x_ingress_path/;
         proxy_redirect https://\$host:8099/ \$http_x_ingress_path/;
+        proxy_redirect http://\$host/ \$http_x_ingress_path/;
+        proxy_redirect https://\$host/ \$http_x_ingress_path/;
+        proxy_redirect http://${DOMAIN}/ \$http_x_ingress_path/;
+        proxy_redirect https://${DOMAIN}/ \$http_x_ingress_path/;
+        proxy_redirect ${ROOT_URL} \$http_x_ingress_path/;
         proxy_redirect / \$http_x_ingress_path/;
     }
 }

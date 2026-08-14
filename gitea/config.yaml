@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration#add-on-config
 name: Gitea
-version: "0.2.4"
+version: "0.3.0"
 slug: gitea
 description: Self-hosted Git service with code repositories, issues, and pull requests
 url: "https://github.com/jmichelp/ha-addon-gitea"
@@ -20,6 +20,31 @@ options:
   certfile: fullchain.pem
   keyfile: privkey.pem
   use_nginx: false
+  ssh_server: builtin
+  password_check_pwn: false
+  mailer_enabled: false
+  mailer_protocol: starttls
+  mailer_smtp_addr: ""
+  mailer_smtp_port: 587
+  mailer_user: ""
+  mailer_password: ""
+  mailer_from: ""
+  mailer_helo_hostname: ""
+  mailer_force_trust_cert: false
+  register_email_confirm: false
+  captcha_enabled: false
+  captcha_type: image
+  captcha_for_login: false
+  recaptcha_sitekey: ""
+  recaptcha_secret: ""
+  recaptcha_url: "https://www.google.com/recaptcha/"
+  hcaptcha_sitekey: ""
+  hcaptcha_secret: ""
+  mcaptcha_sitekey: ""
+  mcaptcha_secret: ""
+  mcaptcha_url: "https://demo.mcaptcha.org/"
+  cf_turnstile_sitekey: ""
+  cf_turnstile_secret: ""
 schema:
   domain: match(^[a-zA-Z0-9.-]{1,253}$)
   ssl: bool
@@ -27,6 +52,31 @@ schema:
   keyfile: str
   root_url: str?
   use_nginx: bool
+  ssh_server: list(builtin|openssh)?
+  password_check_pwn: bool?
+  mailer_enabled: bool?
+  mailer_protocol: list(smtp|smtps|starttls|sendmail|dummy)?
+  mailer_smtp_addr: str?
+  mailer_smtp_port: port?
+  mailer_user: str?
+  mailer_password: password?
+  mailer_from: str?
+  mailer_helo_hostname: str?
+  mailer_force_trust_cert: bool?
+  register_email_confirm: bool?
+  captcha_enabled: bool?
+  captcha_type: list(image|recaptcha|hcaptcha|mcaptcha|cfturnstile)?
+  captcha_for_login: bool?
+  recaptcha_sitekey: str?
+  recaptcha_secret: password?
+  recaptcha_url: str?
+  hcaptcha_sitekey: str?
+  hcaptcha_secret: password?
+  mcaptcha_sitekey: str?
+  mcaptcha_secret: password?
+  mcaptcha_url: str?
+  cf_turnstile_sitekey: str?
+  cf_turnstile_secret: password?
 ports:
   2222/tcp: 3022
   3000/tcp: 3000

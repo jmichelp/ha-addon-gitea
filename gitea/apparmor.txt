@@ -59,6 +59,13 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /run/nginx/** rwkl,
   /run/nginx.pid rwkl,
 
+  # OpenSSH server
+  /usr/sbin/sshd rix,
+  /usr/lib/ssh/** rix,
+  /etc/ssh/** rwkl,
+  /run/sshd/** rwkl,
+  /var/empty/** r,
+
   # Start new profile for service
   /usr/bin/gitea cx -> gitea_bin,
   /usr/local/bin/gitea cx -> gitea_bin,

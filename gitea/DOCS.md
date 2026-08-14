@@ -65,6 +65,18 @@ git clone gitea-ha:<username>/<repo>.git
 | `keyfile` | string | `privkey.pem` | Private key filename in `/ssl/`. |
 | `root_url` | string | optional | Custom root URL (e.g. `https://gitea.example.com/`). |
 | `use_nginx` | boolean | `false` | Generate reverse proxy configuration for the NGINX SSL Proxy add-on. |
+| `ssh_server` | string | `builtin` | SSH server implementation (`builtin` for Gitea's embedded server, or `openssh` for OpenSSH daemon). |
+| `password_check_pwn` | boolean | `false` | Check passwords against HaveIBeenPwned API on user registration/password changes. |
+| `mailer_enabled` | boolean | `false` | Enable email notification and registration confirmation service. |
+| `mailer_protocol` | string | `starttls` | SMTP protocol (`starttls`, `smtps`, `smtp`, `sendmail`, `dummy`). |
+| `mailer_smtp_addr` | string | `""` | SMTP server hostname or IP address. |
+| `mailer_smtp_port` | integer | `587` | SMTP server port number. |
+| `mailer_user` | string | `""` | SMTP authentication username. |
+| `mailer_password` | password | `""` | SMTP authentication password. |
+| `mailer_from` | string | `""` | Sender email address (e.g. `gitea@example.com`). |
+| `register_email_confirm` | boolean | `false` | Require email confirmation before new users can log in. |
+| `captcha_enabled` | boolean | `false` | Enable CAPTCHA validation on registration. |
+| `captcha_type` | string | `image` | CAPTCHA engine (`image`, `recaptcha`, `hcaptcha`, `mcaptcha`, `cfturnstile`). |
 
 ## Backups
 

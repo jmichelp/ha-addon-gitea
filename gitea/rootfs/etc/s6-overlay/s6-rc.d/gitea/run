@@ -57,7 +57,13 @@ export GITEA__server__OFFLINE_MODE="false"
 export GITEA__server__ENABLE_GZIP="true"
 export GITEA__service__DISABLE_GRAVATAR="false"
 export GITEA__service__ENABLE_FEDERATED_AVATAR="false"
-export GITEA__server__START_SSH_SERVER="true"
+if bashio::config.equals 'ssh_server' 'openssh'; then
+    START_SSH_SERVER="false"
+else
+    START_SSH_SERVER="true"
+fi
+
+export GITEA__server__START_SSH_SERVER="${START_SSH_SERVER}"
 export GITEA__server__DISABLE_SSH="false"
 export GITEA__server__SSH_PORT="${SSH_PORT}"
 export GITEA__server__SSH_LISTEN_PORT="2222"

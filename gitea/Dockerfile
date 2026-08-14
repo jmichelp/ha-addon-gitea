@@ -22,12 +22,15 @@ RUN \
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apk --no-cache add \
+    git \
     gitea \
     sqlite \
     su-exec \
     bash \
     curl \
     openssh-client \
+    openssh-server \
+    openssh-sftp-server \
     openssh-keygen \
     mailcap \
     tzdata \
@@ -44,7 +47,8 @@ ENV GITEA_CUSTOM=/data/gitea
 ENV GITEA_WORK_DIR=/data/gitea
 
 # Setup directories and compatibility symlinks
-RUN mkdir -p /app/gitea /data/git/.gnupg /var/log/nginx /var/lib/nginx /run/nginx \
+RUN mkdir -p /app/gitea /data/git/.gnupg /var/log/nginx /var/lib/nginx /run/nginx /run/sshd /var/empty \
+    && chmod 755 /run/sshd /var/empty \
     && ln -sf /usr/bin/gitea /app/gitea/gitea \
     && ln -sf /usr/bin/gitea /usr/local/bin/gitea
 
@@ -57,7 +61,8 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/init-gitea/up \
     /etc/s6-overlay/s6-rc.d/gitea/run \
     /etc/s6-overlay/s6-rc.d/gitea/finish \
-    /etc/s6-overlay/s6-rc.d/nginx/run
+    /etc/s6-overlay/s6-rc.d/nginx/run \
+    /etc/s6-overlay/s6-rc.d/sshd/run
 
 # Build arguments
 ARG BUILD_DATE

@@ -1,5 +1,19 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.3.0
+
+- Automatic app.ini template detection, synchronization, and migration on startup
+- Add option to choose between OpenSSH server and Gitea embedded SSH server (`ssh_server`)
+- Generate unique secrets via `gitea generate secret` and persist key files under `/data` using `SECRET_KEY_URI`, `INTERNAL_TOKEN_URI`, and `JWT_SECRET_URI`
+- Set `PASSWORD_HASH_ALGO` to `argon2` and add `password_check_pwn` configuration option
+- Ensure WebAuthn passkey authentication works properly with HTTPS and RP ID/Origin binding
+- Add email notifications and registration confirmation configuration options (`mailer_*`)
+- Add CAPTCHA configuration options (`captcha_*`)
+- Ensure `git`, `openssh-server`, and `openssh-sftp-server` are explicitly installed in container
+- Configure `REVERSE_PROXY_TRUSTED_PROXIES` and `REVERSE_PROXY_LIMIT` to eliminate URL scheme mismatch warnings
+- Fix Ingress mixed content error on login and 2FA form actions
+- Optimize external reverse proxy and Ingress with unbuffered low-latency streaming
+
 ## 0.2.5
 
 - Fix Ingress mixed content error on login and 2FA form actions by mapping forwarded HTTPS scheme and hostname
