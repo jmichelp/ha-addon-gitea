@@ -396,7 +396,6 @@ SSH_LISTEN_PORT = 2222
 SSH_KEYGEN_PATH = /usr/bin/ssh-keygen
 SSH_ROOT_PATH = /data/git/.ssh
 LFS_START_SERVER = true
-LFS_JWT_SECRET = ${LFS_JWT_SECRET_VAL}
 LFS_JWT_SECRET_URI = file:/data/gitea/conf/lfs_jwt_secret
 OFFLINE_MODE = false
 ENABLE_GZIP = true
@@ -409,9 +408,7 @@ SQLITE_TIMEOUT = 20000
 
 [security]
 INSTALL_LOCK = true
-SECRET_KEY = ${SECRET_KEY_VAL}
 SECRET_KEY_URI = file:/data/gitea/conf/secret_key
-INTERNAL_TOKEN = ${INTERNAL_TOKEN_VAL}
 INTERNAL_TOKEN_URI = file:/data/gitea/conf/internal_token
 PASSWORD_HASH_ALGO = argon2
 PASSWORD_CHECK_PWN = ${PASSWORD_CHECK_PWN}
@@ -454,7 +451,6 @@ HELO_HOSTNAME = ${MAILER_HELO_HOSTNAME}
 FORCE_TRUST_SERVER_CERT = ${MAILER_FORCE_TRUST_CERT}
 
 [oauth2]
-JWT_SECRET = ${JWT_SECRET_VAL}
 JWT_SECRET_URI = file:/data/gitea/conf/jwt_secret
 
 [cache]
@@ -473,8 +469,8 @@ PATH = /data/gitea/data/lfs
 EOF
 else
     bashio::log.info "Upgrading and synchronizing Gitea configuration (app.ini)..."
-    # Remove obsolete keys and cleanup legacy symlink paths
-    sed -i '/STATIC_ROOT_PATH/d' /data/gitea/conf/app.ini
+    # Remove obsolete raw keys so Gitea uses only *_URI
+    sed -i '/STATIC_ROOT_PATH/d; /^SECRET_KEY =/d; /^INTERNAL_TOKEN =/d; /^JWT_SECRET =/d; /^LFS_JWT_SECRET =/d' /data/gitea/conf/app.ini
 
     # Synchronize template baseline defaults
     ini_set_default "repository" "ROOT" "/data/git/repositories"
@@ -492,7 +488,6 @@ else
     ini_set_default "server" "SSH_KEYGEN_PATH" "/usr/bin/ssh-keygen"
     ini_set "server" "SSH_ROOT_PATH" "/data/git/.ssh"
     ini_set_default "server" "LFS_START_SERVER" "true"
-    ini_set "server" "LFS_JWT_SECRET" "${LFS_JWT_SECRET_VAL}"
     ini_set "server" "LFS_JWT_SECRET_URI" "file:/data/gitea/conf/lfs_jwt_secret"
     ini_set_default "server" "OFFLINE_MODE" "false"
     ini_set_default "server" "ENABLE_GZIP" "true"
@@ -503,9 +498,7 @@ else
     ini_set "database" "SQLITE_TIMEOUT" "20000"
 
     ini_set_default "security" "INSTALL_LOCK" "true"
-    ini_set "security" "SECRET_KEY" "${SECRET_KEY_VAL}"
     ini_set "security" "SECRET_KEY_URI" "file:/data/gitea/conf/secret_key"
-    ini_set "security" "INTERNAL_TOKEN" "${INTERNAL_TOKEN_VAL}"
     ini_set "security" "INTERNAL_TOKEN_URI" "file:/data/gitea/conf/internal_token"
     ini_set "security" "PASSWORD_HASH_ALGO" "argon2"
     ini_set "security" "PASSWORD_CHECK_PWN" "${PASSWORD_CHECK_PWN}"
@@ -545,7 +538,6 @@ else
     ini_set "mailer" "HELO_HOSTNAME" "${MAILER_HELO_HOSTNAME}"
     ini_set "mailer" "FORCE_TRUST_SERVER_CERT" "${MAILER_FORCE_TRUST_CERT}"
 
-    ini_set "oauth2" "JWT_SECRET" "${JWT_SECRET_VAL}"
     ini_set "oauth2" "JWT_SECRET_URI" "file:/data/gitea/conf/jwt_secret"
 
     ini_set_default "cache" "ADAPTER" "memory"
