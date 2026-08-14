@@ -11,5 +11,12 @@ fi
 
 bashio::log.info "Starting OpenSSH daemon on port 2222..."
 
+# Ensure privilege separation directory and host keys have correct permissions
+mkdir -p /run/sshd /var/empty
+chown -R root:root /run/sshd /var/empty /data/gitea/ssh/ssh_host_* 2>/dev/null || true
+chmod 755 /run/sshd /var/empty 2>/dev/null || true
+chmod 600 /data/gitea/ssh/ssh_host_*_key 2>/dev/null || true
+chmod 644 /data/gitea/ssh/ssh_host_*.pub 2>/dev/null || true
+
 # Run OpenSSH daemon in foreground
 exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config

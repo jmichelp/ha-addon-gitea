@@ -72,6 +72,8 @@ PubkeyAuthentication yes
 ChallengeResponseAuthentication no
 KbdInteractiveAuthentication no
 UsePAM no
+UseDNS no
+StrictModes yes
 PrintMotd no
 AcceptEnv GIT_PROTOCOL
 Subsystem sftp /usr/lib/ssh/sftp-server
@@ -569,15 +571,35 @@ fi
 # Secure sensitive configuration and SSH keys
 chmod 640 /data/gitea/conf/app.ini 2>/dev/null || true
 chmod 600 /data/gitea/conf/secret_key /data/gitea/conf/internal_token /data/gitea/conf/jwt_secret /data/gitea/conf/lfs_jwt_secret 2>/dev/null || true
-chmod 700 /data/git/.ssh /data/gitea/ssh 2>/dev/null || true
-find /data/git/.ssh /data/gitea/ssh -type f -name "*_key" -exec chmod 600 {} + 2>/dev/null || true
 
 # Ensure all Gitea data is owned by git:git
 chown -R git:git /data/gitea /data/git /app/gitea 2>/dev/null || true
 
+# SSH host keys must be owned by root:root with 600 permissions for OpenSSH server
+chown -R root:root /data/gitea/ssh/ssh_host_* 2>/dev/null || true
+chmod 600 /data/gitea/ssh/ssh_host_*_key 2>/dev/null || true
+chmod 644 /data/gitea/ssh/ssh_host_*.pub 2>/dev/null || true
+
+# User SSH authorized_keys and .ssh directory must be owned by git:git with strict permissions
+chown -R git:git /data/git/.ssh 2>/dev/null || true
+chmod 700 /data/git/.ssh 2>/dev/null || true
+chmod 600 /data/git/.ssh/authorized_keys 2>/dev/null || true
+
+# Ensure sshd privilege separation directory is owned by root
+chown -R root:root /run/sshd /var/empty 2>/dev/null || true
+chmod 755 /run/sshd /var/empty 2>/dev/null || true
+
+# Ensure git account is unlocked for pubkey auth
+passwd -u git 2>/dev/null || true
+
 # Initialize / migrate database schema to ensure all tables exist
 bashio::log.info "Initializing / updating Gitea database schema..."
 su-exec git /usr/bin/gitea migrate -c /data/gitea/conf/app.ini --work-path /data/gitea 2>&1 || true
+
+# Synchronize authorized_keys and repository hooks
+bashio::log.info "Synchronizing SSH keys and repository hooks..."
+su-exec git /usr/bin/gitea admin regenerate keys-keys -c /data/gitea/conf/app.ini --work-path /data/gitea 2>&1 || true
+su-exec git /usr/bin/gitea admin regenerate hooks -c /data/gitea/conf/app.ini --work-path /data/gitea 2>&1 || true
 
 # Ensure SQLite database runs in WAL mode with normal sync for high performance
 if [ -f /data/gitea/data/gitea.db ]; then

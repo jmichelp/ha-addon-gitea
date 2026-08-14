@@ -1,5 +1,10 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.3.5
+
+- Fix `git push` with built-in ssh server
+- Fix OpenSSH server connection reset, AppArmor capabilities, host key permissions, and authorized keys synchronization
+
 ## 0.3.4
 
 - Almost there... Let's hope the worker now is covered

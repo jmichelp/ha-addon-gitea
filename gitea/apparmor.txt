@@ -16,6 +16,10 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   capability setuid,
   capability kill,
   capability net_bind_service,
+  capability sys_chroot,
+  capability sys_resource,
+  capability audit_write,
+  capability setpcap,
 
   # Networking
   network tcp,
@@ -46,7 +50,7 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
   /tmp/** rwk,
 
   # Mapped volumes and configuration
-  /data/** rwkl,
+  /data/** rwklix,
   /ssl/** r,
   /share/** rwkl,
 
@@ -88,7 +92,7 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
     network unix,
 
     # Persistent data and mapped volumes
-    /data/** rwkl,
+    /data/** rwklix,
     /share/** rwkl,
     /ssl/** r,
 
@@ -96,9 +100,7 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
     /usr/bin/gitea rix,
     /usr/local/bin/gitea rix,
     /app/gitea/gitea rix,
-    /bin/bash rix,
-    /bin/sh rix,
-    /bin/echo ix,
+    /bin/** rix,
     /etc/passwd r,
     /etc/group r,
     /dev/tty rw,
@@ -113,15 +115,16 @@ profile gitea flags=(attach_disconnected,mediate_deleted) {
     /proc/** r,
     /sys/** r,
     /usr/bin/** rix,
+    /usr/sbin/** rix,
     /usr/libexec/git-core/** rix,
     /usr/lib/git-core/** rix,
     /usr/share/** r,
 
     /tmp/** rwkl,
 
-    owner @{HOME}/** rwkl,
+    owner @{HOME}/** rwklix,
     owner @{HOME}/ rwkl,
-    owner /data/** rwkl,
+    owner /data/** rwklix,
     owner /data/ rwkl,
   }
 }

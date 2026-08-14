@@ -39,7 +39,8 @@ RUN apk --no-cache add \
 
 # Ensure git user/group exists with proper home directory
 RUN if ! getent group git >/dev/null 2>&1; then addgroup -S -g 1000 git; fi \
-    && if ! getent passwd git >/dev/null 2>&1; then adduser -S -H -D -h /data/git -s /bin/bash -u 1000 -G git git; fi
+    && if ! getent passwd git >/dev/null 2>&1; then adduser -S -H -D -h /data/git -s /bin/bash -u 1000 -G git git; fi \
+    && passwd -u git 2>/dev/null || true
 
 ENV USER=git
 ENV HOME=/data/git
