@@ -1,0 +1,90 @@
+name: Check Upstream Gitea Version
+
+on:
+  schedule:
+    # Run monthly on the 1st of every month at 00:00 UTC
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check for Alpine Gitea updates
+    runs-on: ubuntu-latest
+    outputs:
+      update_available: ${{ steps.check.outputs.update_available }}
+      upstream_version: ${{ steps.check.outputs.upstream_version }}
+      current_version: ${{ steps.check.outputs.current_version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check upstream Alpine and Docker Gitea versions
+        id: check
+        run: |
+          echo "=== Checking Upstream Alpine Gitea Version ==="
+          echo "Pulling Home Assistant base image..."
+          docker pull ghcr.io/home-assistant/amd64-base:latest
+
+          UPSTREAM_VERSION=$(docker run --rm ghcr.io/home-assistant/amd64-base:latest sh -c \
+            "apk update >/dev/null 2>&1 && (apk list gitea 2>/dev/null | head -n1 | cut -d' ' -f1 | sed 's/^gitea-//' || apk search -x -v gitea 2>/dev/null | head -n1 | cut -d' ' -f1 | sed 's/^gitea-//')")
+
+          if [ -z "$UPSTREAM_VERSION" ]; then
+            echo "::error::Could not determine upstream Gitea package version from Alpine repository."
+            exit 1
+          fi
+          echo "Upstream Alpine Gitea version: $UPSTREAM_VERSION"
+
+          echo "=== Checking Current Gitea Version in Docker ==="
+          DOCKER_IMAGE="ghcr.io/jmichelp/app-gitea:latest"
+          CURRENT_VERSION=""
+
+          if docker pull "$DOCKER_IMAGE" 2>/dev/null || docker pull "ghcr.io/jmichelp/app-gitea:amd64-latest" 2>/dev/null; then
+            # Try apk info inside the image first
+            CURRENT_VERSION=$(docker run --rm --entrypoint /bin/sh "$DOCKER_IMAGE" -c \
+              "apk info -v gitea 2>/dev/null | head -n1 | sed 's/^gitea-//'" 2>/dev/null || true)
+            
+            # Fallback to gitea binary version if apk info is not available
+            if [ -z "$CURRENT_VERSION" ]; then
+              CURRENT_VERSION=$(docker run --rm --entrypoint gitea "$DOCKER_IMAGE" --version 2>/dev/null | awk '{print $3}' || true)
+            fi
+          fi
+
+          # Fallback: check CHANGELOG.md if image could not be pulled or version not detected
+          if [ -z "$CURRENT_VERSION" ] && [ -f "gitea/CHANGELOG.md" ]; then
+            echo "Docker image not available or version not detected, checking CHANGELOG.md for last version..."
+            CURRENT_VERSION=$(grep -oE "Update Gitea to [^ ]+" gitea/CHANGELOG.md | head -n1 | sed 's/Update Gitea to //' || true)
+          fi
+
+          echo "Current Docker Gitea version: ${CURRENT_VERSION:-unknown}"
+
+          echo "=== Version Comparison ==="
+          UPSTREAM_BASE="${UPSTREAM_VERSION%%-r*}"
+          CURRENT_BASE="${CURRENT_VERSION%%-r*}"
+
+          if [ -n "$UPSTREAM_VERSION" ] && [ "$UPSTREAM_VERSION" != "$CURRENT_VERSION" ] && [ "$UPSTREAM_BASE" != "$CURRENT_VERSION" ]; then
+            echo "New Gitea version available: $UPSTREAM_VERSION (current: ${CURRENT_VERSION:-none})"
+            echo "update_available=true" >> "$GITHUB_OUTPUT"
+            echo "upstream_version=$UPSTREAM_VERSION" >> "$GITHUB_OUTPUT"
+            echo "current_version=${CURRENT_VERSION:-unknown}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Gitea is up to date ($CURRENT_VERSION). No update needed."
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            echo "upstream_version=$UPSTREAM_VERSION" >> "$GITHUB_OUTPUT"
+            echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+  update:
+    name: Trigger update workflow
+    needs: check
+    if: needs.check.outputs.update_available == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/update-version.yaml
+    with:
+      upstream_version: ${{ needs.check.outputs.upstream_version }}
+      current_version: ${{ needs.check.outputs.current_version }}
+    secrets: inherit

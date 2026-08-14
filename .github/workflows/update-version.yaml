@@ -1,0 +1,86 @@
+name: Update Gitea Version
+
+on:
+  workflow_call:
+    inputs:
+      upstream_version:
+        description: "Upstream Gitea package version from Alpine"
+        type: string
+        required: false
+      current_version:
+        description: "Current Gitea package version running in Docker"
+        type: string
+        required: false
+  workflow_dispatch:
+    inputs:
+      upstream_version:
+        description: "Upstream Gitea package version (optional, auto-detected if empty)"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  create-pr:
+    name: Bump version and create PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve Gitea versions
+        id: versions
+        run: |
+          UPSTREAM_VER="${{ inputs.upstream_version }}"
+          CURRENT_VER="${{ inputs.current_version }}"
+
+          if [ -z "$UPSTREAM_VER" ]; then
+            echo "Upstream version not provided, detecting from Alpine base image..."
+            docker pull ghcr.io/home-assistant/amd64-base:latest
+            UPSTREAM_VER=$(docker run --rm ghcr.io/home-assistant/amd64-base:latest sh -c \
+              "apk update >/dev/null 2>&1 && (apk list gitea 2>/dev/null | head -n1 | cut -d' ' -f1 | sed 's/^gitea-//' || apk search -x -v gitea 2>/dev/null | head -n1 | cut -d' ' -f1 | sed 's/^gitea-//')")
+          fi
+
+          if [ -z "$CURRENT_VER" ]; then
+            DOCKER_IMAGE="ghcr.io/jmichelp/app-gitea:latest"
+            if docker pull "$DOCKER_IMAGE" 2>/dev/null || docker pull "ghcr.io/jmichelp/app-gitea:amd64-latest" 2>/dev/null; then
+              CURRENT_VER=$(docker run --rm --entrypoint /bin/sh "$DOCKER_IMAGE" -c \
+                "apk info -v gitea 2>/dev/null | head -n1 | sed 's/^gitea-//'" 2>/dev/null || true)
+            fi
+            if [ -z "$CURRENT_VER" ] && [ -f "gitea/CHANGELOG.md" ]; then
+              CURRENT_VER=$(grep -oE "Update Gitea to [^ ]+" gitea/CHANGELOG.md | head -n1 | sed 's/Update Gitea to //' || true)
+            fi
+          fi
+
+          echo "upstream_version=${UPSTREAM_VER}" >> "$GITHUB_OUTPUT"
+          echo "current_version=${CURRENT_VER:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump minor version and update changelog
+        id: bump
+        run: |
+          python3 .github/scripts/bump-version.py \
+            --upstream-version "${{ steps.versions.outputs.upstream_version }}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(gitea): update Gitea to ${{ steps.versions.outputs.upstream_version }}"
+          title: "Update Gitea to ${{ steps.versions.outputs.upstream_version }}"
+          body: |
+            ## Automated Gitea Version Update
+
+            A new version of the Gitea package was detected in Alpine Linux: **${{ steps.versions.outputs.upstream_version }}** (currently deployed: **${{ steps.versions.outputs.current_version }}**).
+
+            ### Changes
+            - Bump minor version to `${{ steps.bump.outputs.new_addon_version }}` in `gitea/config.yaml`
+            - Document update to Gitea `${{ steps.versions.outputs.upstream_version }}` in `gitea/CHANGELOG.md`
+
+            When this pull request is merged to `main`, the build workflow will automatically build and publish the updated Docker image tagged as `${{ steps.bump.outputs.new_addon_version }}` and `latest`.
+          branch: "update-gitea-${{ steps.bump.outputs.new_addon_version }}"
+          delete-branch: true
+          base: main
