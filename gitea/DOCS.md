@@ -1,4 +1,4 @@
-# Home Assistant Add-on: Gitea
+# Home Assistant App: Gitea
 
 Gitea is a painless self-hosted Git service written in Go. It includes repository hosting, issue tracking, pull requests, user management, and Git LFS support.
 
@@ -9,13 +9,13 @@ Gitea is a painless self-hosted Git service written in Go. It includes repositor
 - **SSL/TLS Support:** Optional HTTPS for direct web access or reverse proxy via NGINX.
 - **SQLite Database:** Lightweight, zero-configuration local database stored in `/data/gitea/data/gitea.db`.
 - **Git LFS Support:** Store large files directly in Gitea.
-- **Persistent Data:** All repositories and configurations are preserved across add-on updates in `/data`.
+- **Persistent Data:** All repositories and configurations are preserved across app updates in `/data`.
 
 ## How to use
 
-1. Install and start the add-on.
+1. Install and start the app.
 2. Click **Open Web UI** or access **Gitea** in the sidebar via Ingress.
-3. On first startup, the add-on initializes a production-ready Gitea instance. Register your first user account; this account automatically becomes the administrator.
+3. On first startup, the app initializes a production-ready Gitea instance. Register your first user account; this account automatically becomes the administrator.
 4. Add your SSH public keys under **User Settings > SSH / GPG Keys**.
 5. Create or migrate your Git repositories!
 
@@ -28,11 +28,11 @@ Open Gitea directly from your Home Assistant sidebar. Authentication and session
 Access Gitea directly at `http://<YOUR_HA_IP>:3000/` (or `https://...` if direct `ssl` is enabled). Useful for Git HTTP cloning and direct browser access.
 
 ### 3. NGINX Reverse Proxy
-If using the **NGINX Home Assistant SSL Proxy** add-on (`use_nginx: true`), set the `domain` option to a dedicated subdomain (e.g. `gitea.yourdomain.com` or `gitea.local`) rather than sharing the exact same domain as Home Assistant Core, so NGINX routes traffic correctly.
+If using the **NGINX Home Assistant SSL Proxy** app (`use_nginx: true`), set the `domain` option to a dedicated subdomain (e.g. `gitea.yourdomain.com` or `gitea.local`) rather than sharing the exact same domain as Home Assistant Core, so NGINX routes traffic correctly.
 
 ## SSH Access
 
-The add-on runs Gitea's internal SSH server on port `2222` inside the container, mapped to port `3022` on your Home Assistant host.
+The app runs Gitea's internal SSH server on port `2222` inside the container, mapped to port `3022` on your Home Assistant host.
 
 To clone repositories over SSH:
 
@@ -64,7 +64,7 @@ git clone gitea-ha:<username>/<repo>.git
 | `certfile` | string | `fullchain.pem` | Certificate filename in `/ssl/`. |
 | `keyfile` | string | `privkey.pem` | Private key filename in `/ssl/`. |
 | `root_url` | string | optional | Custom root URL (e.g. `https://gitea.example.com/`). |
-| `use_nginx` | boolean | `false` | Generate reverse proxy configuration for the NGINX SSL Proxy add-on. |
+| `use_nginx` | boolean | `false` | Generate reverse proxy configuration for the NGINX SSL Proxy app. |
 | `ssh_server` | string | `builtin` | SSH server implementation (`builtin` for Gitea's embedded server, or `openssh` for OpenSSH daemon). |
 | `password_check_pwn` | boolean | `false` | Check passwords against HaveIBeenPwned API on user registration/password changes. |
 | `disable_registration` | boolean | `false` | Disable public user self-registration. New accounts must be created by an administrator. |

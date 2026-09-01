@@ -1,6 +1,6 @@
-# Home Assistant Add-on: Gitea
+# Home Assistant App: Gitea
 
-Gitea add-on for Home Assistant to self-host code repositories.
+Gitea app for Home Assistant to self-host code repositories.
 
 [![GitHub Release][releases-shield]][releases]
 ![Project Stage][project-stage-shield]
@@ -12,7 +12,7 @@ Gitea add-on for Home Assistant to self-host code repositories.
 
 ## About
 
-This add-on allows you to run a lightweight, self-hosted Gitea Git service directly within Home Assistant.
+This app allows you to run a lightweight, self-hosted Gitea Git service directly within Home Assistant.
 
 ## Features
 

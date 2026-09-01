@@ -1,12 +1,12 @@
-# Gitea for Home Assistant add-on repository
+# Gitea for Home Assistant app repository
 
-[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fjmichelp%2Fha-addon-gitea)
+[![Open your Home Assistant instance and show the add app repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fjmichelp%2Fha-addon-gitea)
 
-## Add-ons
+## Apps
 
-This repository contains the following add-ons:
+This repository contains the following apps for Home Assistant:
 
-### [Gitea add-on](./gitea)
+### [Gitea app](./gitea)
 
 [![GitHub Release][releases-shield]][releases]
 ![Project Stage][project-stage-shield]
@@ -23,8 +23,6 @@ Self-hosted Git service with code repositories, issues, pull requests, and Git L
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [commits-shield]: https://img.shields.io/github/commit-activity/y/jmichelp/ha-addon-gitea.svg
 [commits]: https://github.com/jmichelp/ha-addon-gitea/commits/main
-[github-actions-shield]: https://github.com/jmichelp/ha-addon-gitea/workflows/CI/badge.svg
-[github-actions]: https://github.com/jmichelp/ha-addon-gitea/actions
 [maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg
 [project-stage-shield]: https://img.shields.io/badge/project%20stage-experimental-yellow.svg
 [releases-shield]: https://img.shields.io/github/release/jmichelp/ha-addon-gitea.svg

@@ -18,11 +18,11 @@ jobs:
       addons: ${{ steps.addons.outputs.addons_list }}
     steps:
       - name: ⤵️ Check out code from GitHub
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: 🔍 Find app directories
         id: addons
-        uses: home-assistant/actions/helpers/find-addons@master
+        uses: home-assistant/actions/helpers/find-addons@a7c616ce81ccda50150bf1595786c71b1883fabb # master
 
   lint:
     name: Lint app ${{ matrix.path }}
@@ -33,9 +33,9 @@ jobs:
         path: ${{ fromJson(needs.find.outputs.addons) }}
     steps:
       - name: ⤵️ Check out code from GitHub
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: 🚀 Run Home Assistant App Lint
-        uses: frenck/action-addon-linter@v2.21
+        uses: frenck/action-addon-linter@b9cfd1bc62ba60d2c4fc96317b5f7ada5923f4a7 # v2.21
         with:
           path: "./${{ matrix.path }}"
