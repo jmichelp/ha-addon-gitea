@@ -1,5 +1,9 @@
 <!-- https://developers.home-assistant.io/docs/add-ons/presentation#keeping-a-changelog -->
 
+## 0.5.0
+
+- Update Gitea to 1.25.4-r4
+
 ## 0.4.0
 
 - Update Gitea to 1.25.4-r3
